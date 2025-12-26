@@ -30,18 +30,8 @@ PRD → Competitive Research → Architecture → Development → Testing → De
 
 ## Agent Swarms
 
-```
-                              ┌─────────────────────┐
-                              │   ORCHESTRATOR      │
-                              └──────────┬──────────┘
-                                         │
-      ┌──────────────┬──────────────┬────┴────┬──────────────┬──────────────┐
-      │              │              │         │              │              │
- ┌────▼────┐   ┌─────▼─────┐  ┌─────▼─────┐ ┌─▼───┐   ┌──────▼──────┐ ┌─────▼─────┐
- │ENGINEERING│  │ OPERATIONS│  │  BUSINESS │ │DATA │   │   PRODUCT   │ │  GROWTH   │
- │  8 agents │  │  8 agents │  │  8 agents │ │3 agt│   │   3 agents  │ │  4 agents │
- └──────────┘   └───────────┘  └───────────┘ └─────┘   └─────────────┘ └───────────┘
-```
+<img width="5309" height="979" alt="image" src="https://github.com/user-attachments/assets/7d18635d-a606-401f-8d9f-430e6e4ee689" />
+
 
 ### Engineering (8)
 `eng-frontend` `eng-backend` `eng-database` `eng-mobile` `eng-api` `eng-qa` `eng-perf` `eng-infra`
