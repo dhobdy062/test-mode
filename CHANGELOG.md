@@ -5,6 +5,65 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-01-02
+
+### Added
+- **Quality Control Principles** - Integrated GitHub's "Speed Without Control" framework:
+
+  **Principle 1: Guardrails, Not Just Acceleration**
+  - Static analysis before AI review (CodeQL, ESLint, Pylint, type checking)
+  - Automated detection of unused vars, duplicated logic, code smells
+  - Cyclomatic complexity limits (max 15 per function)
+  - Secret scanning to prevent credential leaks
+  - 5 quality gate categories with blocking rules
+
+  **Principle 2: Structured Prompting for Subagents**
+  - All subagent dispatches must include: GOAL, CONSTRAINTS, CONTEXT, OUTPUT FORMAT
+  - Goals explain "what success looks like" (not just actions)
+  - Constraints define boundaries (dependencies, compatibility, performance)
+  - Context includes CONTINUITY.md, ledgers, learnings, architecture decisions
+  - Output format specifies deliverables (tests, docs, benchmarks)
+
+  **Principle 3: Document Decisions, Not Just Code**
+  - Every completed task requires decision documentation
+  - WHY: Problem, root cause, solution chosen, alternatives considered
+  - WHAT: Files modified, APIs changed, behavior changes, dependencies
+  - TRADE-OFFS: Gains, costs, neutral changes
+  - RISKS: What could go wrong, mitigation strategies
+  - TEST RESULTS: Unit/integration/performance metrics
+  - NEXT STEPS: Follow-up tasks
+
+- **AI Slop Prevention** - Automated detection and blocking:
+  - Warning signs: quality degradation, copy-paste duplication, over-engineering
+  - Missing error handling, generic variable names, magic numbers
+  - Commented-out code, TODO comments without issues
+  - Auto-fail and re-dispatch with stricter constraints
+
+- **Two-Stage Code Review**:
+  - **Stage 1**: Static analysis (automated) runs first
+  - **Stage 2**: AI reviewers (opus/sonnet) only after static analysis passes
+  - AI reviewers receive static analysis results as context
+  - Prevents wasting AI review time on issues machines can catch
+
+- **Enhanced Task Schema**:
+  - `payload.goal` - High-level objective (required)
+  - `payload.constraints` - Array of limitations
+  - `payload.context` - Related files, ADRs, previous attempts
+  - `result.decisionReport` - Complete Why/What/Trade-offs documentation
+  - Decision reports archived to `.loki/logs/decisions/`
+
+### Changed
+- CODE_REVIEW phase now requires static analysis before AI reviewers
+- Subagent dispatch template updated with GOAL/CONSTRAINTS/CONTEXT/OUTPUT
+- Task completion requires decision documentation (not just code output)
+- Quality gates now include static analysis tools (CodeQL, linters, security scanners)
+- Context-Aware Subagent Dispatch section rewritten for structured prompting
+
+### Philosophy
+"Speed and control aren't trade-offs. They reinforce each other." - GitHub
+
+AI accelerates velocity but can introduce "AI slop" (semi-functional code accumulating technical debt). Loki Mode now pairs acceleration with visible guardrails: static analysis catches machine-detectable issues, structured prompting ensures intentional development, and decision documentation demonstrates thinking beyond shipping features.
+
 ## [2.11.0] - 2026-01-02
 
 ### Added

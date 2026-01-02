@@ -122,6 +122,173 @@ architecture decisions, patterns being followed, etc.]
 
 **CONTINUITY.md is the PRIMARY source of truth for "what am I doing right now?"**
 
+## Quality Control Principles
+
+**CRITICAL:** Speed without quality controls creates "AI slop" - semi-functional code that accumulates technical debt. Loki Mode enforces strict quality guardrails.
+
+### Principle 1: Guardrails, Not Just Acceleration
+
+**Never ship code without passing all quality gates:**
+
+1. **Static Analysis** (automated)
+   - CodeQL security scanning
+   - ESLint/Pylint/Rubocop for code style
+   - Unused variable/import detection
+   - Duplicated logic detection
+   - Type checking (TypeScript/mypy/etc)
+
+2. **3-Reviewer Parallel System** (AI-driven)
+   - Security reviewer (opus)
+   - Architecture reviewer (opus)
+   - Performance reviewer (sonnet)
+
+3. **Severity-Based Blocking**
+   - Critical/High/Medium → MUST FIX before proceeding
+   - Low → Add TODO comment, continue
+   - Cosmetic → Add FIXME comment, continue
+
+4. **Test Coverage Gates**
+   - Unit tests: 100% pass, >80% coverage
+   - Integration tests: 100% pass
+   - E2E tests: critical flows pass
+
+5. **Rulesets** (blocking merges)
+   - No secrets in code
+   - No unhandled exceptions
+   - No SQL injection vulnerabilities
+   - No XSS vulnerabilities
+
+### Principle 2: Structured Prompting for Subagents
+
+**Every subagent dispatch MUST include:**
+
+```markdown
+## GOAL (What success looks like)
+[High-level objective, not just the action]
+Example: "Refactor authentication for maintainability and testability"
+NOT: "Refactor the auth file"
+
+## CONSTRAINTS (What you cannot do)
+- No third-party dependencies without approval
+- Maintain backwards compatibility with v1.x API
+- Keep response time under 200ms
+- Follow existing error handling patterns
+
+## CONTEXT (What you need to know)
+- Related files: [list with brief descriptions]
+- Architecture decisions: [relevant ADRs or patterns]
+- Previous attempts: [what was tried, why it failed]
+- Dependencies: [what this depends on, what depends on this]
+
+## OUTPUT FORMAT (What to deliver)
+- [ ] Pull request with Why/What/Trade-offs description
+- [ ] Unit tests with >90% coverage
+- [ ] Update API documentation
+- [ ] Performance benchmark results
+```
+
+**Template for Task Tool Dispatch:**
+```markdown
+[Task tool call]
+- description: "[5-word summary]"
+- prompt: |
+    ## GOAL
+    [What success looks like]
+
+    ## CONSTRAINTS
+    [What you cannot do]
+
+    ## CONTEXT
+    [What you need to know - include CONTINUITY.md excerpts]
+
+    ## OUTPUT FORMAT
+    - Pull request with Why/What/Trade-offs
+    - Tests passing
+    - Documentation updated
+
+    ## WHEN COMPLETE
+    Report back with:
+    1. WHY: What problem did this solve? What alternatives were considered?
+    2. WHAT: What changed? (files, APIs, behavior)
+    3. TRADE-OFFS: What did we gain? What did we give up?
+    4. RISKS: What could go wrong? How do we mitigate?
+```
+
+### Principle 3: Document Decisions, Not Just Code
+
+**Every completed task MUST include decision documentation:**
+
+```markdown
+## Task Completion Report
+
+### WHY (Problem & Solution Rationale)
+- **Problem**: [What was broken/missing/suboptimal]
+- **Root Cause**: [Why it happened]
+- **Solution Chosen**: [What we implemented]
+- **Alternatives Considered**:
+  1. [Option A]: Rejected because [reason]
+  2. [Option B]: Rejected because [reason]
+
+### WHAT (Changes Made)
+- **Files Modified**: [with line ranges and purpose]
+  - `src/auth.ts:45-89` - Extracted token validation to separate function
+  - `src/auth.test.ts:120-156` - Added edge case tests
+- **APIs Changed**: [breaking vs non-breaking]
+- **Behavior Changes**: [what users will notice]
+- **Dependencies Added/Removed**: [with justification]
+
+### TRADE-OFFS (Gains & Costs)
+- **Gained**:
+  - Better testability (extracted pure functions)
+  - 40% faster token validation
+  - Reduced cyclomatic complexity from 15 to 6
+- **Cost**:
+  - Added 2 new functions (increased surface area)
+  - Requires migration for custom token validators
+- **Neutral**:
+  - No performance change for standard use cases
+
+### RISKS & MITIGATIONS
+- **Risk**: Existing custom validators may break
+  - **Mitigation**: Added backwards-compatibility shim, deprecation warning
+- **Risk**: New validation logic untested at scale
+  - **Mitigation**: Gradual rollout with feature flag, rollback plan ready
+
+### TEST RESULTS
+- Unit: 24/24 passed (coverage: 92%)
+- Integration: 8/8 passed
+- Performance: p99 improved from 145ms → 87ms
+
+### NEXT STEPS (if any)
+- [ ] Monitor error rates for 24h post-deploy
+- [ ] Create follow-up task to remove compatibility shim in v3.0
+```
+
+**This report goes in:**
+1. Task completion result (in queue system)
+2. Git commit message (abbreviated)
+3. Pull request description (full format)
+4. `.loki/logs/decisions/task-{id}-{date}.md` (archived)
+
+### Preventing "AI Slop"
+
+**AI Slop Warning Signs:**
+- Tests pass but code quality degraded
+- Copy-paste duplication instead of abstraction
+- Over-engineered solutions to simple problems
+- Missing error handling
+- No logging/observability
+- Generic variable names (data, temp, result)
+- Magic numbers without constants
+- Commented-out code
+- TODO comments without GitHub issues
+
+**When Detected:**
+1. Fail the task immediately
+2. Add to failed queue with detailed feedback
+3. Re-dispatch with stricter constraints
+4. Update CONTINUITY.md with anti-pattern to avoid
+
 ### Perpetual Improvement Loop
 
 **A product is NEVER truly complete.** There are always:
@@ -468,29 +635,91 @@ const hashPassword = async (password: string): Promise<string> => {
 
 ### Context-Aware Subagent Dispatch
 
-When spawning subagents via Task tool, include relevant context:
+**CRITICAL:** All subagent dispatches MUST follow the structured prompting format (see Quality Control Principles).
+
+**Template with Quality Controls:**
 
 ```markdown
 [Task tool call]
-- description: "Implement login endpoint"
+- description: "[5-word goal-oriented summary]"
+- model: "[opus|sonnet|haiku based on complexity]"
 - prompt: |
-    ## Context from Ledger
-    [Include relevant sections from current ledger]
+    ## GOAL (What Success Looks Like)
+    Implement /auth/login endpoint that is secure, testable, and maintainable.
+    NOT just "implement login endpoint" - explain the quality bar.
 
-    ## Handoff from Previous Agent
-    [Include handoff document if this is a continuation]
+    ## CONSTRAINTS (What You Cannot Do)
+    - No third-party auth libraries without approval
+    - Must maintain backwards compatibility with existing /auth/register
+    - Response time must be <200ms at p99
+    - Must follow existing JWT token pattern
+    - No database schema changes
 
-    ## Relevant Learnings
-    [Include applicable learnings from .loki/memory/learnings/]
+    ## CONTEXT (What You Need to Know)
 
-    ## Your Task
-    Implement the /auth/login endpoint following the patterns established
-    in the handoff document.
+    ### From CONTINUITY.md
+    [Excerpt from .loki/CONTINUITY.md showing current state]
 
-    ## When Complete
-    1. Update your ledger at .loki/memory/ledgers/LEDGER-{your-id}.md
+    ### From Ledger
+    [Relevant sections from .loki/memory/ledgers/LEDGER-{agent-id}.md]
+
+    ### From Handoff
+    [If this is a continuation, include handoff document]
+
+    ### Relevant Learnings
+    [Applicable patterns from .loki/memory/learnings/]
+
+    ### Relevant Rules
+    [Applicable permanent rules from .loki/rules/]
+
+    ### Architecture Context
+    - Related files:
+      - src/auth/register.ts - existing registration flow (follow this pattern)
+      - src/middleware/auth.ts - JWT validation middleware
+      - src/models/user.ts - user model with password hashing
+    - Tech stack: Node.js, Express, PostgreSQL, bcrypt, jsonwebtoken
+    - Error handling: Use ApiError class, log to Winston
+
+    ## OUTPUT FORMAT (What to Deliver)
+    - [ ] Implementation in src/auth/login.ts
+    - [ ] Unit tests with >90% coverage
+    - [ ] Integration tests for happy path + error cases
+    - [ ] API documentation update in docs/api/auth.md
+    - [ ] Performance benchmark showing <200ms p99
+
+    ## WHEN COMPLETE - Report with Why/What/Trade-offs
+
+    ### WHY (Problem & Solution Rationale)
+    - Problem: [what was broken/missing]
+    - Root cause: [why]
+    - Solution chosen: [what you implemented]
+    - Alternatives considered: [what else you evaluated]
+
+    ### WHAT (Changes Made)
+    - Files modified: [with line ranges]
+    - APIs changed: [endpoints, schemas]
+    - Behavior changes: [what users notice]
+    - Dependencies added/removed: [with justification]
+
+    ### TRADE-OFFS (Gains & Costs)
+    - Gained: [benefits]
+    - Cost: [downsides]
+    - Neutral: [no change]
+
+    ### RISKS & MITIGATIONS
+    - Risk: [what could go wrong]
+      - Mitigation: [how you address it]
+
+    ### TEST RESULTS
+    - Unit: X/X passed (coverage: Y%)
+    - Integration: X/X passed
+    - Performance: [benchmark results]
+
+    ## POST-COMPLETION TASKS
+    1. Update ledger at .loki/memory/ledgers/LEDGER-{your-id}.md
     2. Create handoff document if passing to next agent
     3. Extract learnings if you discovered new patterns
+    4. Update CONTINUITY.md with progress
 ```
 
 ### Compound Learnings (Permanent Rules)
@@ -793,29 +1022,94 @@ ls -la backend/src/middleware/
 **On Failure:** Log specific integration failures with error messages
 
 ### CODE_REVIEW Phase
-Parallel code review with 3 specialized reviewers:
+**Two-stage review: Static Analysis (automated) + AI Reviewers (parallel)**
+
+#### Stage 1: Static Analysis (Automated Quality Gates)
+
+Run BEFORE dispatching AI reviewers to catch common issues:
+
+```bash
+# 1. Install/verify static analysis tools based on tech stack
+# Node.js/TypeScript
+npm install -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+npm install -D eslint-plugin-security
+npx tsc --noEmit  # Type checking
+
+# Python
+pip install pylint mypy bandit
+pylint src/
+mypy src/
+bandit -r src/  # Security scanning
+
+# Go
+go vet ./...
+staticcheck ./...
+gosec ./...
+
+# 2. Run CodeQL (if available)
+# https://codeql.github.com/
+codeql database create codeql-db --language=javascript
+codeql database analyze codeql-db --format=sarif-latest --output=results.sarif
+
+# 3. Check for common issues
+grep -r "console.log\|print(" src/  # No debug statements in production
+grep -r "TODO\|FIXME\|HACK" src/   # Track technical debt
+grep -r "any\|Object\|unknown" src/*.ts  # Avoid loose typing
+
+# 4. Detect code smells
+npx jscpd src/  # Duplicated code detection
+npx complexity-report src/  # Cyclomatic complexity
+
+# 5. Security scanning
+npm audit --audit-level=high
+snyk test  # If available
 ```
-Use Task tool to spawn 3 parallel review agents:
+
+**Auto-fail if:**
+- TypeScript/mypy errors exist
+- ESLint/Pylint errors (not warnings) exist
+- Security scanner finds high/critical vulnerabilities
+- Duplicated code >10% of codebase
+- Any function with cyclomatic complexity >15
+- Secrets detected in code (API keys, passwords, tokens)
+
+**Log all findings to:** `.loki/logs/static-analysis-{timestamp}.json`
+
+#### Stage 2: AI Reviewers (Parallel Dispatch)
+
+**ONLY after static analysis passes**, dispatch 3 parallel reviewers:
+
+```markdown
+Use Task tool to spawn 3 parallel review agents in SINGLE message:
 
 Agent 1: Security Reviewer (model: opus)
-- Focus: Auth, input validation, secrets, injection, XSS
-- Check: OWASP compliance, secure defaults
+- Focus: Auth, input validation, secrets, injection, XSS, CSRF
+- Check: OWASP Top 10 compliance, secure defaults
+- Input: Static analysis results + code changes
 
-Agent 2: Architecture Reviewer (model: sonnet)
-- Focus: Design patterns, SOLID principles, scalability
-- Check: Code organization, dependency management
+Agent 2: Architecture Reviewer (model: opus)
+- Focus: Design patterns, SOLID principles, scalability, maintainability
+- Check: Code organization, dependency management, abstractions
+- Input: Static analysis results + code changes
 
 Agent 3: Performance Reviewer (model: sonnet)
-- Focus: N+1 queries, memory leaks, caching
-- Check: Database indexes, API response times
+- Focus: N+1 queries, memory leaks, caching, algorithmic complexity
+- Check: Database indexes, API response times, resource usage
+- Input: Static analysis results + code changes
 ```
-**Actions:**
-1. Dispatch all 3 reviewers in a SINGLE message with 3 Task tool calls
-2. Collect findings from each reviewer
-3. Triage by severity: Critical > High > Medium > Low
-4. Create fix tasks for Critical/High/Medium issues
 
-**Pass Criteria:** No Critical/High issues, Medium issues logged
+**Actions:**
+1. Run Stage 1 (static analysis) - BLOCK if critical issues
+2. Dispatch all 3 AI reviewers in a SINGLE message with 3 Task tool calls
+3. Each reviewer receives static analysis results as context
+4. Collect findings from each reviewer
+5. Triage by severity: Critical > High > Medium > Low
+6. Create fix tasks for Critical/High/Medium issues
+
+**Pass Criteria:**
+- Static analysis: 0 errors, 0 high/critical security issues
+- AI reviewers: No Critical/High issues, Medium issues logged
+
 **On Failure:** BLOCK on Critical/High - fix before proceeding
 
 ### WEB_RESEARCH Phase
@@ -1497,7 +1791,14 @@ See `references/agents.md` for complete definitions. Summary:
   "payload": {
     "action": "implement|test|deploy|...",
     "target": "file/path or resource",
-    "params": {}
+    "params": {},
+    "goal": "What success looks like (high-level objective)",
+    "constraints": ["No third-party deps", "Maintain backwards compat"],
+    "context": {
+      "relatedFiles": ["file1.ts", "file2.ts"],
+      "architectureDecisions": ["ADR-001: Use JWT tokens"],
+      "previousAttempts": "What was tried before, why it failed"
+    }
   },
   "createdAt": "ISO",
   "claimedBy": null,
@@ -1508,9 +1809,53 @@ See `references/agents.md` for complete definitions. Summary:
   "backoffSeconds": 60,
   "lastError": null,
   "completedAt": null,
-  "result": null
+  "result": {
+    "status": "success|failed",
+    "output": "What was produced",
+    "decisionReport": {
+      "why": {
+        "problem": "What was broken/missing",
+        "rootCause": "Why it happened",
+        "solutionChosen": "What we implemented",
+        "alternativesConsidered": [
+          {"option": "Option A", "rejected": "reason"},
+          {"option": "Option B", "rejected": "reason"}
+        ]
+      },
+      "what": {
+        "filesModified": [
+          {"path": "src/auth.ts", "lines": "45-89", "purpose": "Extracted validation"}
+        ],
+        "apisChanged": {"breaking": [], "nonBreaking": ["/auth/login"]},
+        "behaviorChanges": "What users will notice",
+        "dependenciesChanged": {"added": [], "removed": []}
+      },
+      "tradeoffs": {
+        "gained": ["Better testability", "40% faster"],
+        "cost": ["Added 2 new functions", "Migration required"],
+        "neutral": ["No performance change for standard use"]
+      },
+      "risks": [
+        {
+          "risk": "Custom validators may break",
+          "mitigation": "Added backwards-compat shim"
+        }
+      ],
+      "testResults": {
+        "unit": {"passed": 24, "failed": 0, "coverage": "92%"},
+        "integration": {"passed": 8, "failed": 0},
+        "performance": "p99: 145ms → 87ms"
+      },
+      "nextSteps": [
+        "Monitor error rates for 24h",
+        "Remove compat shim in v3.0"
+      ]
+    }
+  }
 }
 ```
+
+**Decision Report is REQUIRED for completed tasks.** Tasks without proper decision documentation will be marked as incomplete.
 
 ### Queue Operations
 
