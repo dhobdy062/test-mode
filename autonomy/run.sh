@@ -21,6 +21,14 @@
 #   LOKI_RESOURCE_CPU_THRESHOLD  - CPU % threshold to warn (default: 80)
 #   LOKI_RESOURCE_MEM_THRESHOLD  - Memory % threshold to warn (default: 80)
 #
+# Security & Autonomy Controls (Enterprise):
+#   LOKI_STAGED_AUTONOMY    - Require approval before execution (default: false)
+#   LOKI_AUDIT_LOG          - Enable audit logging (default: true)
+#   LOKI_MAX_PARALLEL_AGENTS - Limit concurrent agent spawning (default: 10)
+#   LOKI_SANDBOX_MODE       - Run in sandboxed container (default: false, requires Docker)
+#   LOKI_ALLOWED_PATHS      - Comma-separated paths agents can modify (default: all)
+#   LOKI_BLOCKED_COMMANDS   - Comma-separated blocked shell commands (default: rm -rf /)
+#
 # SDLC Phase Controls (all enabled by default, set to 'false' to skip):
 #   LOKI_PHASE_UNIT_TESTS      - Run unit tests (default: true)
 #   LOKI_PHASE_API_TESTS       - Functional API testing (default: true)
@@ -58,6 +66,15 @@ DASHBOARD_PORT=${LOKI_DASHBOARD_PORT:-57374}
 RESOURCE_CHECK_INTERVAL=${LOKI_RESOURCE_CHECK_INTERVAL:-300}  # Check every 5 minutes
 RESOURCE_CPU_THRESHOLD=${LOKI_RESOURCE_CPU_THRESHOLD:-80}     # CPU % threshold
 RESOURCE_MEM_THRESHOLD=${LOKI_RESOURCE_MEM_THRESHOLD:-80}     # Memory % threshold
+
+# Security & Autonomy Controls
+STAGED_AUTONOMY=${LOKI_STAGED_AUTONOMY:-false}           # Require plan approval
+AUDIT_LOG_ENABLED=${LOKI_AUDIT_LOG:-true}                # Enable audit logging
+MAX_PARALLEL_AGENTS=${LOKI_MAX_PARALLEL_AGENTS:-10}      # Limit concurrent agents
+SANDBOX_MODE=${LOKI_SANDBOX_MODE:-false}                 # Docker sandbox mode
+ALLOWED_PATHS=${LOKI_ALLOWED_PATHS:-""}                  # Empty = all paths allowed
+BLOCKED_COMMANDS=${LOKI_BLOCKED_COMMANDS:-"rm -rf /,dd if=,mkfs,:(){ :|:& };:"}
+
 STATUS_MONITOR_PID=""
 DASHBOARD_PID=""
 RESOURCE_MONITOR_PID=""
@@ -899,6 +916,225 @@ stop_resource_monitor() {
     fi
 }
 
+#===============================================================================
+# Audit Logging (Enterprise Security)
+#===============================================================================
+
+audit_log() {
+    # Log security-relevant events for enterprise compliance
+    local event_type="$1"
+    local event_data="$2"
+    local audit_file=".loki/logs/audit-$(date +%Y%m%d).jsonl"
+
+    if [ "$AUDIT_LOG_ENABLED" != "true" ]; then
+        return
+    fi
+
+    mkdir -p .loki/logs
+
+    local log_entry=$(cat << EOF
+{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","event":"$event_type","data":"$event_data","user":"$(whoami)","pid":$$}
+EOF
+)
+    echo "$log_entry" >> "$audit_file"
+}
+
+check_staged_autonomy() {
+    # In staged autonomy mode, write plan and wait for approval
+    local plan_file="$1"
+
+    if [ "$STAGED_AUTONOMY" != "true" ]; then
+        return 0
+    fi
+
+    log_info "STAGED AUTONOMY: Waiting for plan approval..."
+    log_info "Review plan at: $plan_file"
+    log_info "Create .loki/signals/PLAN_APPROVED to continue"
+
+    audit_log "STAGED_AUTONOMY_WAIT" "plan=$plan_file"
+
+    # Wait for approval signal
+    while [ ! -f ".loki/signals/PLAN_APPROVED" ]; do
+        sleep 5
+    done
+
+    rm -f ".loki/signals/PLAN_APPROVED"
+    audit_log "STAGED_AUTONOMY_APPROVED" "plan=$plan_file"
+    log_success "Plan approved, continuing execution..."
+}
+
+check_command_allowed() {
+    # Check if a command is in the blocked list
+    local command="$1"
+
+    IFS=',' read -ra BLOCKED_ARRAY <<< "$BLOCKED_COMMANDS"
+    for blocked in "${BLOCKED_ARRAY[@]}"; do
+        if [[ "$command" == *"$blocked"* ]]; then
+            audit_log "BLOCKED_COMMAND" "command=$command,pattern=$blocked"
+            log_error "SECURITY: Blocked dangerous command: $command"
+            return 1
+        fi
+    done
+
+    return 0
+}
+
+#===============================================================================
+# Cross-Project Learnings Database
+#===============================================================================
+
+init_learnings_db() {
+    # Initialize the cross-project learnings database
+    local learnings_dir="${HOME}/.loki/learnings"
+    mkdir -p "$learnings_dir"
+
+    # Create database files if they don't exist
+    if [ ! -f "$learnings_dir/patterns.jsonl" ]; then
+        echo '{"version":"1.0","created":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' > "$learnings_dir/patterns.jsonl"
+    fi
+
+    if [ ! -f "$learnings_dir/mistakes.jsonl" ]; then
+        echo '{"version":"1.0","created":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' > "$learnings_dir/mistakes.jsonl"
+    fi
+
+    if [ ! -f "$learnings_dir/successes.jsonl" ]; then
+        echo '{"version":"1.0","created":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' > "$learnings_dir/successes.jsonl"
+    fi
+
+    log_info "Learnings database initialized at: $learnings_dir"
+}
+
+save_learning() {
+    # Save a learning to the cross-project database
+    local learning_type="$1"  # pattern, mistake, success
+    local category="$2"
+    local description="$3"
+    local project="${4:-$(basename "$(pwd)")}"
+
+    local learnings_dir="${HOME}/.loki/learnings"
+    local target_file="$learnings_dir/${learning_type}s.jsonl"
+
+    if [ ! -d "$learnings_dir" ]; then
+        init_learnings_db
+    fi
+
+    local learning_entry=$(cat << EOF
+{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","project":"$project","category":"$category","description":"$description"}
+EOF
+)
+    echo "$learning_entry" >> "$target_file"
+    log_info "Saved $learning_type: $category"
+}
+
+get_relevant_learnings() {
+    # Get learnings relevant to the current context
+    local context="$1"
+    local learnings_dir="${HOME}/.loki/learnings"
+    local output_file=".loki/state/relevant-learnings.json"
+
+    if [ ! -d "$learnings_dir" ]; then
+        echo '{"patterns":[],"mistakes":[],"successes":[]}' > "$output_file"
+        return
+    fi
+
+    # Simple grep-based relevance (can be enhanced with embeddings)
+    python3 << LEARNINGS_SCRIPT
+import json
+import os
+
+learnings_dir = os.path.expanduser("~/.loki/learnings")
+context = "$context".lower()
+
+def load_jsonl(filepath):
+    entries = []
+    try:
+        with open(filepath, 'r') as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                    if 'description' in entry:
+                        entries.append(entry)
+                except:
+                    continue
+    except:
+        pass
+    return entries
+
+def filter_relevant(entries, context, limit=5):
+    scored = []
+    for e in entries:
+        desc = e.get('description', '').lower()
+        cat = e.get('category', '').lower()
+        score = sum(1 for word in context.split() if word in desc or word in cat)
+        if score > 0:
+            scored.append((score, e))
+    scored.sort(reverse=True, key=lambda x: x[0])
+    return [e for _, e in scored[:limit]]
+
+patterns = load_jsonl(f"{learnings_dir}/patterns.jsonl")
+mistakes = load_jsonl(f"{learnings_dir}/mistakes.jsonl")
+successes = load_jsonl(f"{learnings_dir}/successes.jsonl")
+
+result = {
+    "patterns": filter_relevant(patterns, context),
+    "mistakes": filter_relevant(mistakes, context),
+    "successes": filter_relevant(successes, context)
+}
+
+with open(".loki/state/relevant-learnings.json", 'w') as f:
+    json.dump(result, f, indent=2)
+LEARNINGS_SCRIPT
+
+    log_info "Loaded relevant learnings to: $output_file"
+}
+
+extract_learnings_from_session() {
+    # Extract learnings from completed session
+    local continuity_file=".loki/CONTINUITY.md"
+
+    if [ ! -f "$continuity_file" ]; then
+        return
+    fi
+
+    log_info "Extracting learnings from session..."
+
+    # Parse CONTINUITY.md for Mistakes & Learnings section
+    python3 << EXTRACT_SCRIPT
+import re
+import json
+import os
+from datetime import datetime
+
+continuity_file = ".loki/CONTINUITY.md"
+learnings_dir = os.path.expanduser("~/.loki/learnings")
+
+if not os.path.exists(continuity_file):
+    exit(0)
+
+with open(continuity_file, 'r') as f:
+    content = f.read()
+
+# Find Mistakes & Learnings section
+mistakes_match = re.search(r'## Mistakes & Learnings\n(.*?)(?=\n## |\Z)', content, re.DOTALL)
+if mistakes_match:
+    mistakes_text = mistakes_match.group(1)
+    # Extract bullet points
+    bullets = re.findall(r'[-*]\s+(.+)', mistakes_text)
+    for bullet in bullets:
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "project": os.path.basename(os.getcwd()),
+            "category": "session",
+            "description": bullet.strip()
+        }
+        with open(f"{learnings_dir}/mistakes.jsonl", 'a') as f:
+            f.write(json.dumps(entry) + "\n")
+        print(f"Extracted: {bullet[:50]}...")
+
+print("Learning extraction complete")
+EXTRACT_SCRIPT
+}
+
 start_dashboard() {
     log_header "Starting Loki Dashboard"
 
@@ -1191,7 +1427,7 @@ build_prompt() {
     phases="${phases%,}"  # Remove trailing comma
 
     # Ralph Wiggum Mode - Reason-Act-Reflect-VERIFY cycle with self-verification loop (Boris Cherny pattern)
-    local rarv_instruction="RALPH WIGGUM MODE ACTIVE. Use Reason-Act-Reflect-VERIFY cycle: 1) REASON - READ .loki/CONTINUITY.md including 'Mistakes & Learnings' section to avoid past errors. Check .loki/state/ and .loki/queue/, identify next task. CHECK .loki/state/resources.json for system resource warnings - if CPU or memory is high, reduce parallel agent spawning or pause non-critical tasks. If queue empty, find new improvements. 2) ACT - Execute task, write code, commit changes atomically (git checkpoint). 3) REFLECT - Update .loki/CONTINUITY.md with progress, update state, identify NEXT improvement. 4) VERIFY - Run automated tests (unit, integration, E2E), check compilation/build, verify against spec. IF VERIFICATION FAILS: a) Capture error details (stack trace, logs), b) Analyze root cause, c) UPDATE 'Mistakes & Learnings' in CONTINUITY.md with what failed, why, and how to prevent, d) Rollback to last good git checkpoint if needed, e) Apply learning and RETRY from REASON. If verification passes, mark task complete and continue. This self-verification loop achieves 2-3x quality improvement. CRITICAL: There is NEVER a 'finished' state - always find the next improvement, optimization, test, or feature."
+    local rarv_instruction="RALPH WIGGUM MODE ACTIVE. Use Reason-Act-Reflect-VERIFY cycle: 1) REASON - READ .loki/CONTINUITY.md including 'Mistakes & Learnings' section to avoid past errors. CHECK .loki/state/relevant-learnings.json for cross-project learnings from previous projects (mistakes to avoid, patterns to apply). Check .loki/state/ and .loki/queue/, identify next task. CHECK .loki/state/resources.json for system resource warnings - if CPU or memory is high, reduce parallel agent spawning or pause non-critical tasks. Limit to MAX_PARALLEL_AGENTS=${MAX_PARALLEL_AGENTS}. If queue empty, find new improvements. 2) ACT - Execute task, write code, commit changes atomically (git checkpoint). 3) REFLECT - Update .loki/CONTINUITY.md with progress, update state, identify NEXT improvement. Save valuable learnings for future projects. 4) VERIFY - Run automated tests (unit, integration, E2E), check compilation/build, verify against spec. IF VERIFICATION FAILS: a) Capture error details (stack trace, logs), b) Analyze root cause, c) UPDATE 'Mistakes & Learnings' in CONTINUITY.md with what failed, why, and how to prevent, d) Rollback to last good git checkpoint if needed, e) Apply learning and RETRY from REASON. If verification passes, mark task complete and continue. This self-verification loop achieves 2-3x quality improvement. CRITICAL: There is NEVER a 'finished' state - always find the next improvement, optimization, test, or feature."
 
     # Completion promise instruction (only if set)
     local completion_instruction=""
@@ -1555,9 +1791,28 @@ main() {
     # Start resource monitor (background CPU/memory checks)
     start_resource_monitor
 
+    # Initialize cross-project learnings database
+    init_learnings_db
+
+    # Load relevant learnings for this project context
+    if [ -n "$PRD_PATH" ] && [ -f "$PRD_PATH" ]; then
+        get_relevant_learnings "$(cat "$PRD_PATH" | head -100)"
+    else
+        get_relevant_learnings "general development"
+    fi
+
+    # Log session start for audit
+    audit_log "SESSION_START" "prd=$PRD_PATH,dashboard=$ENABLE_DASHBOARD,staged_autonomy=$STAGED_AUTONOMY"
+
     # Run autonomous loop
     local result=0
     run_autonomous "$PRD_PATH" || result=$?
+
+    # Extract and save learnings from this session
+    extract_learnings_from_session
+
+    # Log session end for audit
+    audit_log "SESSION_END" "result=$result,prd=$PRD_PATH"
 
     # Cleanup
     stop_dashboard

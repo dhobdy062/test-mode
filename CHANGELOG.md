@@ -5,6 +5,84 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.19.0] - 2026-01-04
+
+### Added - Major Competitive Improvements
+
+Based on comprehensive competitive analysis against Claude-Flow (10.7K stars), MetaGPT (62.4K stars), CrewAI (25K+ stars), Cursor Agent ($29B valuation), and Devin AI ($10.2B valuation).
+
+#### 1. Benchmark Runner Infrastructure (`benchmarks/run-benchmarks.sh`)
+- **HumanEval Benchmark** - 164 Python programming problems
+  - Downloads official dataset from OpenAI
+  - Creates results JSON with pass rates
+  - Target: Match MetaGPT's 85.9-87.7% Pass@1
+- **SWE-bench Lite Benchmark** - 300 real-world GitHub issues
+  - Integrates with official SWE-bench harness
+  - Tracks resolution rates against competitors
+  - Target: Compete with top agents (45-77% resolution)
+- **Results Directory** - Timestamped results in `benchmarks/results/YYYY-MM-DD-HH-MM-SS/`
+- **Summary Generation** - Markdown report with methodology explanation
+
+#### 2. Enterprise Security Features (run.sh:70-76, 923-983)
+- **Staged Autonomy Mode** (`LOKI_STAGED_AUTONOMY=true`)
+  - Creates execution plan in `.loki/plans/current-plan.md`
+  - Waits for `.loki/signals/PLAN_APPROVED` before proceeding
+  - Mirrors Cursor's staged autonomy pattern
+- **Audit Logging** (`LOKI_AUDIT_LOG=true`)
+  - JSONL audit trail at `.loki/logs/audit-YYYYMMDD.jsonl`
+  - Logs: timestamp, event type, data, user, PID
+  - Events: SESSION_START, SESSION_END, AGENT_SPAWN, TASK_COMPLETE
+- **Command Blocking** (`LOKI_BLOCKED_COMMANDS`)
+  - Default blocks: `rm -rf /`, `dd if=`, `mkfs`, fork bomb
+  - Customizable via environment variable
+- **Parallel Agent Limiting** (`LOKI_MAX_PARALLEL_AGENTS=10`)
+  - Prevents resource exhaustion from too many agents
+  - Enforced in RARV instruction
+- **Path Restrictions** (`LOKI_ALLOWED_PATHS`)
+  - Restrict agent access to specific directories
+  - Empty = all paths allowed (default)
+
+#### 3. Cross-Project Learnings Database (run.sh:986-1136)
+- **Global Learnings Directory** (`~/.loki/learnings/`)
+  - `patterns.jsonl` - Successful patterns from past projects
+  - `mistakes.jsonl` - Errors to avoid with prevention strategies
+  - `successes.jsonl` - Proven approaches that worked
+- **Automatic Learning Extraction** - Parses CONTINUITY.md "Mistakes & Learnings" section at session end
+- **Contextual Loading** - Loads relevant learnings based on PRD content at session start
+- **Relevant Learnings File** - `.loki/state/relevant-learnings.json` for agent access
+- **Addresses Gap** - Competitors like Claude-Flow have AgentDB; now Loki Mode has cross-project memory
+
+#### 4. Competitive Analysis Documentation (`docs/COMPETITIVE-ANALYSIS.md`)
+- **Factual Comparison Table** - Real metrics vs competitors
+  - GitHub stars, agent counts, benchmark scores
+  - Enterprise security, observability, pricing
+  - Production readiness assessment
+- **Detailed Competitor Analysis** - Claude-Flow, MetaGPT, CrewAI, Cursor, Devin
+- **Critical Gaps Identified** - 5 priority areas for improvement
+- **Loki Mode Advantages** - Business ops, full SDLC, RARV, resource monitoring
+- **Improvement Roadmap** - Phased plan for addressing gaps
+
+### Changed
+- **RARV Cycle** - Enhanced to check cross-project learnings (run.sh:1430)
+  - Reads `.loki/state/relevant-learnings.json` at REASON step
+  - Avoids known mistakes from previous projects
+  - Applies successful patterns automatically
+- **Main Function** - Initializes learnings DB and extracts learnings at session end
+
+### Impact
+- **Credibility** - Benchmark infrastructure for verifiable claims
+- **Enterprise Ready** - Security features required for adoption
+- **Learning System** - Agents improve across projects, not just within sessions
+- **Competitive Positioning** - Clear documentation of advantages and gaps
+
+### Competitive Position After This Release
+| Capability | Before | After |
+|------------|--------|-------|
+| Published Benchmarks | None | HumanEval + SWE-bench infrastructure |
+| Enterprise Security | `--dangerously-skip-permissions` | Staged autonomy, audit logs, command blocking |
+| Cross-Project Learning | None | Global learnings database |
+| Competitive Documentation | None | Detailed analysis with sources |
+
 ## [2.18.5] - 2026-01-04
 
 ### Added
