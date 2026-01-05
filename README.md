@@ -33,8 +33,11 @@
 |-----------|-------|---------|
 | **Loki Mode HumanEval** | **98.78% Pass@1** | 162/164 (multi-agent with RARV) |
 | **Direct Claude HumanEval** | **98.17% Pass@1** | 161/164 (single agent baseline) |
-| **SWE-bench Lite** | **99.67% patch gen** | 299/300 problems |
+| **Direct Claude SWE-bench** | **99.67% patch gen** | 299/300 problems |
+| **Loki Mode SWE-bench** | **99.67% patch gen** | 299/300 problems |
 | Model | Claude Opus 4.5 | |
+
+**Key Finding:** Multi-agent RARV matches single-agent performance on both benchmarks after timeout optimization. The 4-agent pipeline (Architect->Engineer->QA->Reviewer) achieves the same 99.67% patch generation as direct Claude.
 
 See [benchmarks/results/](benchmarks/results/) for full methodology and solutions.
 

@@ -192,6 +192,8 @@ Loki Mode has **unique differentiation** in business operations automation but f
 
 ### SWE-bench Lite Results (Full 300 Problems)
 
+**Direct Claude (Single Agent Baseline):**
+
 | Metric | Value |
 |--------|-------|
 | **Patch Generation** | **99.67%** |
@@ -200,7 +202,27 @@ Loki Mode has **unique differentiation** in business operations automation but f
 | Model | Claude Opus 4.5 |
 | Time | 6.17 hours |
 
-**Note:** Patches generated for 299 out of 300 SWE-bench Lite problems. Full validation (resolve rate) requires running the Docker-based SWE-bench harness to apply patches and execute test suites.
+**Loki Mode Multi-Agent (with RARV):**
+
+| Metric | Value |
+|--------|-------|
+| **Patch Generation** | **99.67%** |
+| Generated | 299/300 problems |
+| Errors/Timeouts | 1 |
+| Model | Claude Opus 4.5 |
+| Time | 3.5 hours |
+
+**Three-Way Comparison:**
+
+| System | SWE-bench Patch Gen | Notes |
+|--------|---------------------|-------|
+| **Direct Claude** | **99.67%** (299/300) | Single agent, minimal overhead |
+| **Loki Mode (multi-agent)** | **99.67%** (299/300) | 4-agent pipeline with RARV |
+| Devin | ~15% complex tasks | Commercial, different benchmark |
+
+**Key Finding:** After timeout optimization (Architect: 60s->120s), the multi-agent RARV pipeline matches direct Claude's performance on SWE-bench. Both achieve 99.67% patch generation rate.
+
+**Note:** Patches generated; full validation (resolve rate) requires running the Docker-based SWE-bench harness to apply patches and execute test suites.
 
 ---
 

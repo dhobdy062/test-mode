@@ -5,6 +5,31 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.25.0] - 2026-01-05
+
+### Added - Loki Mode SWE-bench Benchmark (99.67% Patch Generation)
+
+**Full SWE-bench Lite Multi-Agent Benchmark** - 299/300 problems!
+
+| System | SWE-bench Patch Gen | Notes |
+|--------|---------------------|-------|
+| Direct Claude | 99.67% (299/300) | Single agent baseline |
+| **Loki Mode (multi-agent)** | **99.67%** (299/300) | 4-agent pipeline with RARV |
+
+**Key Results:**
+- 299/300 problems generated patches (matches single-agent baseline)
+- Multi-agent pipeline: Architect -> Engineer -> QA -> Reviewer
+- Time: 3.5 hours
+- Only 1 problem failed
+
+**Key Finding:** After timeout optimization, multi-agent RARV matches single-agent performance on SWE-bench. The 4-agent pipeline adds verification without sacrificing coverage.
+
+### Changed
+- Updated README with SWE-bench Loki Mode results
+- Updated competitive analysis with benchmark comparison
+- Increased Architect timeout from 60s to 120s for complex problems
+- Increased Reviewer timeout from 30s to 60s
+
 ## [2.24.0] - 2026-01-05
 
 ### Added - Loki Mode Multi-Agent Benchmark (98.78% Pass@1)

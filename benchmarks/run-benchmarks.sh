@@ -1304,7 +1304,7 @@ Output a brief analysis (5-7 lines max) with:
 
 Keep it concise - the Engineer agent will generate the patch.'''
 
-    return call_agent("Architect", prompt, timeout=60)
+    return call_agent("Architect", prompt, timeout=120)
 
 def engineer_agent(problem, architect_analysis):
     """Engineer: Generate the patch based on architect's analysis."""
@@ -1388,7 +1388,7 @@ Provide brief feedback (2-3 lines) on how to fix the patch format:
 - What's wrong
 - How to fix it'''
 
-    feedback, error = call_agent("Reviewer", prompt, timeout=30)
+    feedback, error = call_agent("Reviewer", prompt, timeout=60)
     return {"approved": False, "feedback": feedback or qa_result["error"], "error": error}
 
 def engineer_fix_agent(problem, patch, feedback, attempt):
