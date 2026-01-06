@@ -1586,6 +1586,33 @@ NC = "\033[0m"
 AGENTS_FILE = ".loki/state/agents.json"
 QUEUE_IN_PROGRESS = ".loki/queue/in-progress.json"
 active_agents = {}  # tool_id -> agent_info
+orchestrator_id = "orchestrator-main"
+session_start = datetime.utcnow().isoformat() + "Z"
+
+def init_orchestrator():
+    """Initialize the main orchestrator agent (always visible)."""
+    active_agents[orchestrator_id] = {
+        "agent_id": orchestrator_id,
+        "tool_id": orchestrator_id,
+        "agent_type": "orchestrator",
+        "model": "sonnet",
+        "current_task": "Initializing...",
+        "status": "active",
+        "spawned_at": session_start,
+        "tasks_completed": [],
+        "tool_count": 0
+    }
+    save_agents()
+
+def update_orchestrator_task(tool_name, description=""):
+    """Update orchestrator current task based on tool usage."""
+    if orchestrator_id in active_agents:
+        active_agents[orchestrator_id]["tool_count"] = active_agents[orchestrator_id].get("tool_count", 0) + 1
+        if description:
+            active_agents[orchestrator_id]["current_task"] = f"{tool_name}: {description[:80]}"
+        else:
+            active_agents[orchestrator_id]["current_task"] = f"Using {tool_name}..."
+        save_agents()
 
 def load_agents():
     """Load existing agents from file."""
@@ -1621,6 +1648,10 @@ def process_stream():
     global active_agents
     active_agents = load_agents()
 
+    # Always show the main orchestrator
+    init_orchestrator()
+    print(f"{MAGENTA}[Orchestrator Active]{NC} Main agent started", flush=True)
+
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -1642,6 +1673,22 @@ def process_stream():
                         tool = item.get("name", "unknown")
                         tool_id = item.get("id", "")
                         tool_input = item.get("input", {})
+
+                        # Extract description based on tool type
+                        tool_desc = ""
+                        if tool == "Read":
+                            tool_desc = tool_input.get("file_path", "")
+                        elif tool == "Edit" or tool == "Write":
+                            tool_desc = tool_input.get("file_path", "")
+                        elif tool == "Bash":
+                            tool_desc = tool_input.get("description", tool_input.get("command", "")[:60])
+                        elif tool == "Grep":
+                            tool_desc = f"pattern: {tool_input.get('pattern', '')}"
+                        elif tool == "Glob":
+                            tool_desc = tool_input.get("pattern", "")
+
+                        # Update orchestrator with current tool activity
+                        update_orchestrator_task(tool, tool_desc)
 
                         # Track Task tool calls (agent spawning)
                         if tool == "Task":
@@ -1668,6 +1715,7 @@ def process_stream():
                             todos = tool_input.get("todos", [])
                             in_progress = [t for t in todos if t.get("status") == "in_progress"]
                             save_in_progress([{"id": f"todo-{i}", "type": "todo", "payload": {"action": t.get("content", "")}} for i, t in enumerate(in_progress)])
+                            print(f"\n{CYAN}[Tool: {tool}]{NC} {len(todos)} items", flush=True)
 
                         else:
                             print(f"\n{CYAN}[Tool: {tool}]{NC}", flush=True)
@@ -1690,10 +1738,18 @@ def process_stream():
 
             elif msg_type == "result":
                 # Session complete - mark all agents as completed
+                completed_at = datetime.utcnow().isoformat() + "Z"
                 for agent_id in active_agents:
                     if active_agents[agent_id].get("status") == "active":
                         active_agents[agent_id]["status"] = "completed"
-                        active_agents[agent_id]["completed_at"] = datetime.utcnow().isoformat() + "Z"
+                        active_agents[agent_id]["completed_at"] = completed_at
+                        active_agents[agent_id]["current_task"] = "Session complete"
+
+                # Add session stats to orchestrator
+                if orchestrator_id in active_agents:
+                    tool_count = active_agents[orchestrator_id].get("tool_count", 0)
+                    active_agents[orchestrator_id]["tasks_completed"].append(f"{tool_count} tools used")
+
                 save_agents()
                 print(f"\n{GREEN}[Session complete]{NC}", flush=True)
                 is_error = data.get("is_error", False)
