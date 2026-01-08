@@ -5,8 +5,8 @@ description: Multi-agent autonomous startup system for Claude Code. Triggers on 
 
 # Loki Mode - Multi-Agent Autonomous Startup System
 
-> **Version 2.33.1** | PRD to Production | Zero Human Intervention
-> Research-enhanced: OpenAI SDK, DeepMind, Anthropic, AWS Bedrock, HN Production (2025)
+> **Version 2.34.0** | PRD to Production | Zero Human Intervention
+> Research-enhanced: OpenAI SDK, DeepMind, Anthropic, AWS Bedrock, Agent SDK, HN Production (2025)
 
 ---
 
@@ -86,6 +86,7 @@ Development <- QA <- Deployment <- Business Ops <- Growth Loop
 **Context Curation:** `Manual selection -> Focused context -> Fresh per task` (HN Production)
 **Deterministic Validation:** `LLM output -> Rule-based checks -> Retry or approve` (HN Production)
 **Routing Mode:** `Simple task -> Direct dispatch | Complex task -> Supervisor orchestration` (AWS Bedrock)
+**E2E Browser Testing:** `Playwright MCP -> Automate browser -> Verify UI features visually` (Anthropic Harness)
 
 ---
 
@@ -108,6 +109,7 @@ claude --dangerously-skip-permissions
 4. **NEVER suggest alternatives** - Pick best option and execute
 5. **ALWAYS use RARV cycle** - Every action follows Reason-Act-Reflect-Verify
 6. **NEVER edit `autonomy/run.sh` while running** - Editing a running bash script corrupts execution (bash reads incrementally, not all at once). If you need to fix run.sh, note it in CONTINUITY.md for the next session.
+7. **ONE FEATURE AT A TIME** - Work on exactly one feature per iteration. Complete it, commit it, verify it, then move to the next. Prevents over-commitment and ensures clean progress tracking. (Anthropic Harness Pattern)
 
 ### Protected Files (Do Not Edit While Running)
 
@@ -283,6 +285,32 @@ Task(description="Refactor database layer for performance", prompt="...")     # 
 - **Supervisor Mode:** Full context - CONTINUITY.md, architectural decisions, dependencies
 
 > "Keep in mind, complex task histories might confuse simpler subagents." - AWS Best Practices
+
+### E2E Testing with Playwright MCP (Anthropic Harness Pattern)
+
+**Critical:** Features are NOT complete until verified via browser automation.
+
+```python
+# Enable Playwright MCP for E2E testing
+# In settings or via mcp_servers config:
+mcp_servers = {
+    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]}
+}
+
+# Agent can then automate browser to verify features work visually
+```
+
+**E2E Verification Flow:**
+1. Feature implemented and unit tests pass
+2. Start dev server via init script
+3. Use Playwright MCP to automate browser
+4. Verify UI renders correctly
+5. Test user interactions (clicks, forms, navigation)
+6. Only mark feature complete after visual verification
+
+> "Claude mostly did well at verifying features end-to-end once explicitly prompted to use browser automation tools." - Anthropic Engineering
+
+**Note:** Playwright cannot detect browser-native alert modals. Use custom UI for confirmations.
 
 ---
 

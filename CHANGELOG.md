@@ -5,6 +5,31 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.34.0] - 2026-01-08
+
+### Added - Anthropic Agent Harness Patterns & Claude Agent SDK
+
+**Sources:**
+- [Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) - Anthropic Engineering
+- [Claude Agent SDK Overview](https://platform.claude.com/docs/en/agent-sdk/overview) - Anthropic Platform
+
+**New Patterns:**
+
+1. **One Feature at a Time** (Rule #7 in Core Autonomy)
+   - Work on exactly one feature per iteration
+   - Complete, commit, verify before moving to next
+   - Prevents over-commitment and ensures clean progress tracking
+
+2. **E2E Browser Testing with Playwright MCP**
+   - Features NOT complete until verified via browser automation
+   - New Essential Pattern: `Playwright MCP -> Automate browser -> Verify UI features visually`
+   - Detailed verification flow added to SKILL.md
+   - Note: Playwright cannot detect browser-native alert modals
+
+**Key Quote:** "Claude mostly did well at verifying features end-to-end once explicitly prompted to use browser automation tools." - Anthropic Engineering
+
+---
+
 ## [2.33.1] - 2026-01-08
 
 ### Added - Advanced Task Tool Documentation
