@@ -1,1 +1,4 @@
 .DS_Store
+
+# Autonomi development folder (local development, not tracked)
+the_app/
