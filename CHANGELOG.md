@@ -5,6 +5,34 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.36.9] - 2026-01-17
+
+### Added - MCP Integration Reference with Parallel AI
+
+**Created `references/mcp-integration.md` documenting recommended MCP servers for Loki Mode.**
+
+#### Parallel AI Integration
+
+Added Parallel AI as recommended MCP server for enhanced web research:
+
+| Capability | Benefit for Loki Mode |
+|------------|----------------------|
+| Deep Research API | 48% accuracy on complex research (vs native LLM search) |
+| Evidence-based results | Provenance for every output - aligns with quality gates |
+| Monitor API | Track dependency updates, security advisories, competitor changes |
+| Task API | Structured research with custom schemas |
+
+**SDLC Phases Enhanced:** Discovery, Web Research, Continuous Monitoring
+
+#### Also Documented
+
+- Playwright MCP for E2E testing (existing)
+- MCP configuration locations
+- Usage patterns in Loki Mode agents
+- Evaluation criteria for new MCP servers
+
+---
+
 ## [2.36.8] - 2026-01-17
 
 ### Changed - SDLC Phase-Based Model Assignment
