@@ -5,6 +5,67 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.36.7] - 2026-01-17
+
+### Added - Zencoder/Zenflow CI/CD Automation Patterns
+
+**Comprehensive analysis of Zencoder.ai (Zenflow, Zen Agents, Zentester) identified 3 genuine gaps that have been adopted.**
+
+#### Zencoder Features Analyzed
+
+| Feature | Zencoder | Loki Mode | Assessment |
+|---------|----------|-----------|------------|
+| Four Pillars | Structured Workflows, SDD, Multi-Agent Verification, Parallel Execution | SDLC + RARV + 7 Gates + Worktrees | TIE |
+| Spec-Driven Development | Specs as first-class objects | OpenAPI-first | TIE |
+| Multi-Agent Verification | Model diversity (Claude vs OpenAI, 54% improvement) | 3 blind reviewers + devil's advocate | Different (N/A for Claude Code) |
+| Quality Gates | Built-in verification loops | 7 explicit gates + anti-sycophancy | Loki Mode |
+| Memory System | Not documented | 3-tier episodic/semantic/procedural | Loki Mode |
+| Agent Specialization | Custom Zen Agents | 37 pre-defined specialized | Loki Mode |
+| CI Failure Analysis | Explicit pattern with auto-fix | DevOps agent only | **ADOPTED** |
+| Review Comment Resolution | Auto-apply simple changes | Manual review | **ADOPTED** |
+| Dependency Management | Scheduled PRs, one group at a time | Mentioned only | **ADOPTED** |
+| Multi-Repo Support | Full cross-repo | Single repo | Zencoder (N/A for Claude Code) |
+
+#### Patterns ADOPTED from Zencoder (HIGH Priority)
+
+**1. CI Failure Analysis and Auto-Resolution:**
+- Analyze cryptic CI logs automatically
+- Classify failure type: regression vs flakiness vs environment vs dependency
+- Auto-fix 90% of flaky tests
+- Reduce time-to-green by 50%
+
+**2. Automated Review Comment Resolution:**
+- Auto-apply straightforward review comments
+- Categories: input validation, missing tests, error messages, small refactoring, documentation
+- Skip: architecture changes, API modifications, security-sensitive code
+- Commit with "fix: address review comments (auto-applied)"
+
+**3. Continuous Dependency Management:**
+- Schedule: weekly or bi-weekly scans
+- Strategy: one dependency group at a time
+- Prioritize: security > major > minor > patch
+- Keep PRs small (1-3 packages per PR)
+- Track upgrade history in semantic memory
+
+#### Patterns NOT Adopted (with justification)
+
+| Pattern | Zencoder | Why Not Adopted |
+|---------|----------|-----------------|
+| Model Diversity | Claude critiques OpenAI code | Claude Code only has Claude models |
+| Multi-Repo Support | Cross-repo changes | Claude Code is single-context |
+| IDE Plugins | VS Code, JetBrains | Loki Mode is a skill, not a plugin |
+| Repo Grokking | Proprietary indexing | Claude Code has native exploration |
+
+#### Where Loki Mode Remains SUPERIOR
+
+1. **Quality Control**: 7 gates + blind review + devil's advocate vs built-in loops
+2. **Memory System**: 3-tier (episodic/semantic/procedural) vs none documented
+3. **Agent Specialization**: 37 pre-defined types vs custom-only
+4. **Anti-Sycophancy**: CONSENSAGENT patterns vs not mentioned
+5. **Autonomy**: Zero human intervention design vs human orchestration
+
+---
+
 ## [2.36.6] - 2026-01-17
 
 ### Validated - 2026 Research Resources (RLM, Token-Aware Planning, Claude Code Patterns)

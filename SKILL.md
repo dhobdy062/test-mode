@@ -5,7 +5,7 @@ description: Multi-agent autonomous startup system for Claude Code. Triggers on 
 
 # Loki Mode - Multi-Agent Autonomous Startup System
 
-> **Version 2.36.6** | PRD to Production | Zero Human Intervention
+> **Version 2.36.7** | PRD to Production | Zero Human Intervention
 > Research-enhanced: OpenAI SDK, DeepMind, Anthropic, AWS Bedrock, Agent SDK, HN Production (2025)
 
 ---
@@ -1010,6 +1010,121 @@ checkpoint_strategy:
 
 ---
 
+## CI/CD Automation Patterns (Zencoder)
+
+**Patterns adopted from Zencoder's 10 Proven Workflow Patterns.**
+
+### CI Failure Analysis and Auto-Resolution
+
+**Problem:** Cryptic CI logs waste developer time; flaky tests cost ~8 minutes per job.
+
+```yaml
+ci_failure_workflow:
+  trigger: "CI pipeline fails"
+
+  steps:
+    1_analyze:
+      - Parse CI logs for error patterns
+      - Classify failure type: regression | flakiness | environment | dependency
+      - Identify affected files and line numbers
+
+    2_diagnose:
+      - regression: "New code broke existing functionality"
+      - flakiness: "Test passes sometimes, fails others (timing, race conditions)"
+      - environment: "CI env differs from local (missing deps, config)"
+      - dependency: "External service/API failure"
+
+    3_resolve:
+      - flakiness: Add retries, fix race conditions, stabilize timing
+      - regression: Revert or fix the breaking change
+      - environment: Update CI config, add missing dependencies
+      - dependency: Add mocks, circuit breakers, or skip temporarily
+
+    4_verify:
+      - Re-run failed tests locally
+      - Push fix and verify CI passes
+      - Update CONTINUITY.md with learning
+
+  success_metrics:
+    - "90% of flaky tests auto-fixed"
+    - "Time-to-green reduced by 50%"
+```
+
+### Automated Review Comment Resolution
+
+**Problem:** PRs stall on minor feedback (validation, tests, error messages).
+
+```yaml
+review_comment_auto_resolution:
+  trigger: "Code review comments received"
+
+  auto_apply_categories:
+    - input_validation: "Add null checks, type guards, range validation"
+    - missing_tests: "Generate unit tests for uncovered code paths"
+    - error_messages: "Improve error message clarity and context"
+    - small_refactoring: "Extract method, rename variable, remove duplication"
+    - documentation: "Add/update JSDoc, docstrings, README sections"
+    - formatting: "Fix indentation, spacing, line length"
+
+  workflow:
+    1. Parse review comments
+    2. Classify into auto-apply vs requires-discussion
+    3. Apply auto-fixable changes
+    4. Commit with message: "fix: address review comments (auto-applied)"
+    5. Request re-review for remaining items
+
+  do_not_auto_apply:
+    - Architecture changes
+    - API contract modifications
+    - Security-sensitive code
+    - Performance-critical sections
+```
+
+### Continuous Dependency Management
+
+**Problem:** Teams delay large dependency upgrades, accumulating upgrade debt.
+
+```yaml
+dependency_management:
+  schedule: "Weekly or bi-weekly"
+
+  workflow:
+    1_scan:
+      - List outdated dependencies (npm outdated, pip list --outdated)
+      - Check for security vulnerabilities (npm audit, safety check)
+      - Prioritize: security > major > minor > patch
+
+    2_update:
+      strategy: "One dependency group at a time"
+      groups:
+        - security_critical: "Update immediately, same day"
+        - major_versions: "One major upgrade per PR"
+        - minor_patches: "Batch similar packages together"
+
+    3_validate:
+      - Run full test suite
+      - Check for breaking changes in CHANGELOG
+      - Summarize release notes in PR description
+
+    4_pr_guidelines:
+      - Keep PRs small (1-3 packages per PR)
+      - Include upgrade rationale
+      - Document any breaking changes handled
+      - Add rollback instructions if needed
+
+  automation:
+    - Create scheduled tasks in .loki/queue/pending.json
+    - Track upgrade history in .loki/memory/semantic/dependencies/
+    - Alert on security vulnerabilities immediately
+```
+
+**Why these patterns matter for autonomous operation:**
+- CI failures are auto-triaged and fixed without human intervention
+- Review cycles are shortened by auto-applying simple changes
+- Dependency debt doesn't accumulate (continuous small updates vs painful migrations)
+
+---
+
 ## Exit Conditions
 
 | Condition | Action |
@@ -1098,4 +1213,4 @@ Detailed documentation is split into reference files for progressive loading:
 
 ---
 
-**Version:** 2.36.6 | **Lines:** ~1050 | **Research-Enhanced: 2026 Patterns (arXiv, HN, Labs, OpenCode, Cursor, Devin, Codex, Kiro, Antigravity, Amazon Q, RLM)**
+**Version:** 2.36.7 | **Lines:** ~1150 | **Research-Enhanced: 2026 Patterns (arXiv, HN, Labs, OpenCode, Cursor, Devin, Codex, Kiro, Antigravity, Amazon Q, RLM, Zencoder)**
