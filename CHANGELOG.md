@@ -5,6 +5,40 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.37.1] - 2026-01-18
+
+### Fixed - Direct SQLite Sync for Vibe Kanban
+
+**Replaced JSON file export with direct SQLite database writes for seamless Vibe Kanban integration.**
+
+#### Problem Solved
+- Previous setup wrote JSON files to `~/.vibe-kanban/loki-tasks/` which Vibe Kanban doesn't read
+- Vibe Kanban reads from its SQLite database at `~/Library/Application Support/ai.bloop.vibe-kanban/db.sqlite`
+- Now writes directly to SQLite, eliminating the disconnect
+
+#### New Script
+- **`scripts/sync-to-vibe-kanban.sh`**: Single script that handles everything
+  - Auto-detects project name from current directory
+  - Cross-platform support (macOS and Linux)
+  - Creates project in Vibe Kanban if not exists
+  - Uses `[Loki]` prefix for task identification (safe delete/recreate)
+  - Maps statuses: pending->todo, in-progress->inprogress, completed->done, failed->cancelled
+
+#### Usage
+```bash
+# Run from any project directory with .loki folder
+cd ~/git/your-project
+~/.claude/skills/loki-mode/scripts/sync-to-vibe-kanban.sh
+
+# Or use the watcher for automatic sync
+~/.claude/skills/loki-mode/scripts/vibe-sync-watcher.sh
+```
+
+#### Updated
+- `scripts/vibe-sync-watcher.sh` now uses `sync-to-vibe-kanban.sh` instead of JSON export
+
+---
+
 ## [2.37.0] - 2026-01-18
 
 ### Fixed - Vibe Kanban Integration Issues

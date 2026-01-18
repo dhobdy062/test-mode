@@ -7,7 +7,7 @@ set -uo pipefail
 LOKI_DIR=".loki"
 QUEUE_DIR="$LOKI_DIR/queue"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EXPORT_SCRIPT="$SCRIPT_DIR/export-to-vibe-kanban.sh"
+EXPORT_SCRIPT="$SCRIPT_DIR/sync-to-vibe-kanban.sh"
 
 # Colors
 GREEN='\033[0;32m'

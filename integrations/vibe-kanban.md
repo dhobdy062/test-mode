@@ -16,73 +16,55 @@ Loki Mode can optionally integrate with [Vibe Kanban](https://github.com/BloopAI
 
 ### Step 1: Start Vibe Kanban
 
-In your project directory:
-
 ```bash
 npx vibe-kanban
 ```
 
 This will:
-- Start the Vibe Kanban server (usually on http://127.0.0.1:53380 or similar)
+- Start the Vibe Kanban server
 - Automatically open the UI in your browser
 - Keep the server running (leave this terminal open)
 
 ### Step 2: Run Loki Mode
 
-**Option A: Using Autonomy Runner (Recommended)**
-
-Open a NEW terminal in the same project directory:
+Open a NEW terminal in your project directory:
 
 ```bash
+# Option A: Using Autonomy Runner (Recommended)
 ./autonomy/run.sh ./prd.md
-```
 
-This automatically creates `.loki/STATUS.txt` and task queues.
-
-**Option B: Manual Mode via Claude Code**
-
-```bash
+# Option B: Manual Mode via Claude Code
 claude --dangerously-skip-permissions
+# Then: "Loki Mode with PRD at ./prd.md"
 ```
 
-Then in Claude:
-```
-Loki Mode with PRD at ./prd.md
-```
+### Step 3: Sync Tasks to Vibe Kanban (One Script)
 
-Note: Manual mode creates task queues in `.loki/queue/` but not STATUS.txt.
-
-### Step 3: Export Tasks to Vibe Kanban
-
-Open a THIRD terminal in the same project directory:
+Open another terminal in the same project directory:
 
 ```bash
-./scripts/export-to-vibe-kanban.sh
+# One-time sync
+./scripts/sync-to-vibe-kanban.sh
+
+# Or continuous sync (watches for changes)
+./scripts/vibe-sync-watcher.sh
 ```
 
 You should see output like:
 ```
-[INFO] Exporting Loki Mode tasks to Vibe Kanban...
-[INFO] Export directory: /Users/username/.vibe-kanban/loki-tasks
-[INFO] Current phase: DEVELOPMENT
+[INFO] Project: your-project-name
+[INFO] Path: /Users/username/git/your-project
+[INFO] Database: /Users/username/Library/Application Support/ai.bloop.vibe-kanban/db.sqlite
+[INFO] Project ID: A1B2C3D4E5F6...
+[INFO] Phase: DEVELOPMENT
 [INFO]   pending: 5 tasks
 [INFO]   in-progress: 3 tasks
-[INFO] Exported 8 tasks total
+[INFO] Synced 8 tasks to Vibe Kanban
 ```
 
 ### Step 4: View Tasks in Vibe Kanban
 
-Refresh your Vibe Kanban browser window. You should now see Loki tasks appearing on the board.
-
-### Step 5: Real-Time Updates (Optional)
-
-For automatic sync, run the watcher in a fourth terminal:
-
-```bash
-./scripts/vibe-sync-watcher.sh
-```
-
-This watches `.loki/queue/` for changes and automatically re-exports tasks.
+Tasks appear immediately in Vibe Kanban (no refresh needed). All synced tasks have `[Loki]` prefix for identification.
 
 ## Setup
 
@@ -112,56 +94,39 @@ vibe-kanban:
 
 ## How It Works
 
-### Task Sync Flow
+### Direct SQLite Sync (v2.37.1+)
+
+The sync script writes directly to Vibe Kanban's SQLite database:
 
 ```
-Loki Mode                          Vibe Kanban
-    │                                   │
-    ├─ Creates task ──────────────────► Task appears on board
-    │                                   │
-    ├─ Agent claims task ─────────────► Status: "In Progress"
-    │                                   │
-    │ ◄─────────────────── User pauses ─┤ (optional intervention)
-    │                                   │
-    ├─ Task completes ────────────────► Status: "Done"
-    │                                   │
-    └─ Review results ◄─────────────── User reviews diffs
+Loki Mode (.loki/queue/)     sync-to-vibe-kanban.sh     Vibe Kanban (SQLite)
+         │                            │                          │
+         ├─ pending.json ────────────►├─────────────────────────►│ todo
+         ├─ in-progress.json ────────►├─────────────────────────►│ inprogress
+         ├─ completed.json ──────────►├─────────────────────────►│ done
+         └─ failed.json ─────────────►├─────────────────────────►│ cancelled
 ```
 
-### Task Export Format
+**Database Location:**
+- macOS: `~/Library/Application Support/ai.bloop.vibe-kanban/db.sqlite`
+- Linux: `~/.local/share/ai.bloop.vibe-kanban/db.sqlite` or `~/.config/ai.bloop.vibe-kanban/db.sqlite`
 
-Loki Mode exports tasks in Vibe Kanban compatible format:
+### Status Mapping
 
-```json
-{
-  "id": "loki-task-eng-frontend-001",
-  "title": "Implement user authentication UI",
-  "description": "Create login/signup forms with validation",
-  "status": "todo",
-  "agent": "claude-code",
-  "tags": ["eng-frontend", "phase-4", "priority-high"],
-  "metadata": {
-    "lokiPhase": "DEVELOPMENT",
-    "lokiSwarm": "engineering",
-    "lokiAgent": "eng-frontend",
-    "createdAt": "2025-01-15T10:00:00Z"
-  }
-}
-```
+| Loki Status | Vibe Kanban Status |
+|-------------|-------------------|
+| pending | todo |
+| in-progress | inprogress |
+| completed | done |
+| failed | cancelled |
 
-### Mapping Loki Phases to Kanban Columns
+### Task Identification
 
-| Loki Phase | Kanban Column |
-|------------|---------------|
-| BOOTSTRAP | Backlog |
-| DISCOVERY | Planning |
-| ARCHITECTURE | Planning |
-| INFRASTRUCTURE | In Progress |
-| DEVELOPMENT | In Progress |
-| QA | Review |
-| DEPLOYMENT | Deploying |
-| BUSINESS_OPS | Done |
-| GROWTH | Done |
+All synced tasks use `[Loki]` prefix in title for safe identification. On each sync:
+1. Delete all `[Loki]` tasks for the project
+2. Re-insert current tasks from queue files
+
+This ensures clean sync without duplicates.
 
 ## Export Script
 
