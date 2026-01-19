@@ -318,6 +318,30 @@ See [references/agents.md](references/agents.md) for complete agent type definit
 
 ## How It Works
 
+### **Skill Architecture (v3.0+)**
+
+Loki Mode uses a **progressive disclosure architecture** to minimize context usage:
+
+```
+SKILL.md (~150 lines)         # Always loaded: core RARV cycle, autonomy rules
+skills/
+  00-index.md                  # Module routing table
+  agents.md                    # Agent dispatch, A2A patterns
+  production.md                # HN patterns, batch processing, CI/CD
+  quality-gates.md             # Review system, severity handling
+  testing.md                   # Playwright, E2E, property-based
+  model-selection.md           # Task tool, parallelization
+  artifacts.md                 # Code generation patterns
+  patterns-advanced.md         # Constitutional AI, debate
+  troubleshooting.md           # Error recovery, fallbacks
+references/                    # Deep documentation (23KB+ files)
+```
+
+**Why this matters:**
+- Original 1,517-line SKILL.md consumed ~15% of context before any work began
+- Now only ~1% of context for core skill + on-demand modules
+- More room for actual code and reasoning
+
 ### **Phase Execution**
 
 | Phase | Description |
@@ -497,10 +521,11 @@ Run the comprehensive test suite:
 ## Contributing
 
 Contributions welcome! Please:
-1. Read [SKILL.md](SKILL.md) to understand the architecture
-2. Check [references/agents.md](references/agents.md) for agent definitions
-3. Open an issue for bugs or feature requests
-4. Submit PRs with clear descriptions and tests
+1. Read [SKILL.md](SKILL.md) to understand the core architecture
+2. Review [skills/00-index.md](skills/00-index.md) for module organization (v3.0+)
+3. Check [references/agents.md](references/agents.md) for agent definitions
+4. Open an issue for bugs or feature requests
+5. Submit PRs with clear descriptions and tests
 
 ---
 

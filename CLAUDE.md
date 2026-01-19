@@ -84,7 +84,8 @@ Every iteration follows: **R**eason -> **A**ct -> **R**eflect -> **V**erify
 
 ### Version Numbering
 Follows semantic versioning: MAJOR.MINOR.PATCH
-- Current: v3.0.0
+- Current: v3.1.1
+- MAJOR bump for architecture changes (v3.0.0 = progressive disclosure)
 - MINOR bump for new features
 - PATCH bump for fixes
 
