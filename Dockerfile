@@ -5,7 +5,7 @@
 FROM ubuntu:22.04
 
 LABEL maintainer="Lokesh Mure"
-LABEL version="4.1.0"
+LABEL version="4.2.0"
 LABEL description="Multi-agent autonomous startup system for Claude Code"
 
 # Prevent interactive prompts during install
