@@ -1,7 +1,7 @@
 {
   "name": "loki-mode",
-  "version": "4.2.0",
-  "description": "Multi-agent autonomous startup system for Claude Code",
+  "version": "5.0.0",
+  "description": "Multi-agent autonomous startup system for Claude Code, Codex CLI, and Gemini CLI",
   "keywords": [
     "claude",
     "claude-code",
@@ -29,6 +29,7 @@
     "SKILL.md",
     "VERSION",
     "autonomy/",
+    "providers/",
     "skills/",
     "references/",
     "docs/",

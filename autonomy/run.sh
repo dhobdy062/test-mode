@@ -11,6 +11,7 @@
 #   ./autonomy/run.sh --parallel ./prd.md      # Parallel mode with PRD
 #
 # Environment Variables:
+#   LOKI_PROVIDER       - AI provider: claude (default), codex, gemini
 #   LOKI_MAX_RETRIES    - Max retry attempts (default: 50)
 #   LOKI_BASE_WAIT      - Base wait time in seconds (default: 60)
 #   LOKI_MAX_WAIT       - Max wait time in seconds (default: 3600)
@@ -47,7 +48,7 @@
 # Autonomous Loop Controls (Ralph Wiggum Mode):
 #   LOKI_COMPLETION_PROMISE    - EXPLICIT stop condition text (default: none - runs forever)
 #                                Example: "ALL TESTS PASSING 100%"
-#                                Only stops when Claude outputs this EXACT text
+#                                Only stops when the AI provider outputs this EXACT text
 #   LOKI_MAX_ITERATIONS        - Max loop iterations before exit (default: 1000)
 #   LOKI_PERPETUAL_MODE        - Ignore ALL completion signals (default: false)
 #                                Set to 'true' for truly infinite operation
@@ -65,7 +66,7 @@
 #   LOKI_PARALLEL_MODE         - Enable git worktree-based parallelism (default: false)
 #                                Use --parallel flag or set to 'true'
 #   LOKI_MAX_WORKTREES         - Maximum parallel worktrees (default: 5)
-#   LOKI_MAX_PARALLEL_SESSIONS - Maximum concurrent Claude sessions (default: 3)
+#   LOKI_MAX_PARALLEL_SESSIONS - Maximum concurrent AI sessions (default: 3)
 #   LOKI_PARALLEL_TESTING      - Run testing stream in parallel (default: true)
 #   LOKI_PARALLEL_DOCS         - Run documentation stream in parallel (default: true)
 #   LOKI_PARALLEL_BLOG         - Run blog stream if site has blog (default: false)
@@ -458,6 +459,43 @@ AUTO_MERGE=${LOKI_AUTO_MERGE:-true}
 COMPLEXITY_TIER=${LOKI_COMPLEXITY:-auto}
 DETECTED_COMPLEXITY=""
 
+# Multi-Provider Support (v5.0.0)
+# Provider: claude (default), codex, gemini
+LOKI_PROVIDER=${LOKI_PROVIDER:-claude}
+
+# Source provider configuration
+PROVIDERS_DIR="$PROJECT_DIR/providers"
+if [ -f "$PROVIDERS_DIR/loader.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$PROVIDERS_DIR/loader.sh"
+
+    # Validate provider
+    if ! validate_provider "$LOKI_PROVIDER"; then
+        echo "ERROR: Unknown provider: $LOKI_PROVIDER" >&2
+        echo "Supported providers: ${SUPPORTED_PROVIDERS[*]}" >&2
+        exit 1
+    fi
+
+    # Load provider config
+    if ! load_provider "$LOKI_PROVIDER"; then
+        echo "ERROR: Failed to load provider config: $LOKI_PROVIDER" >&2
+        exit 1
+    fi
+else
+    # Fallback: Claude-only mode (backwards compatibility)
+    PROVIDER_NAME="claude"
+    PROVIDER_CLI="claude"
+    PROVIDER_AUTONOMOUS_FLAG="--dangerously-skip-permissions"
+    PROVIDER_PROMPT_FLAG="-p"
+    PROVIDER_DEGRADED=false
+    PROVIDER_DISPLAY_NAME="Claude Code"
+    PROVIDER_HAS_PARALLEL=true
+    PROVIDER_HAS_SUBAGENTS=true
+    PROVIDER_HAS_TASK_TOOL=true
+    PROVIDER_HAS_MCP=true
+    PROVIDER_PROMPT_POSITIONAL=false
+fi
+
 # Track worktree PIDs for cleanup (requires bash 4+ for associative arrays)
 # Check bash version for parallel mode compatibility
 BASH_VERSION_MAJOR="${BASH_VERSION%%.*}"
@@ -495,6 +533,7 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 log_warning() { log_warn "$@"; }  # Alias for backwards compatibility
 log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 log_step() { echo -e "${CYAN}[STEP]${NC} $*"; }
+log_debug() { [[ "${LOKI_DEBUG:-}" == "true" ]] && echo -e "${CYAN}[DEBUG]${NC} $*" || true; }
 
 #===============================================================================
 # Complexity Tier Detection (Auto-Claude pattern)
@@ -593,6 +632,94 @@ get_phase_names() {
             ;;
         *)
             echo "RESEARCH DESIGN IMPLEMENT TEST REVIEW DEPLOY"
+            ;;
+    esac
+}
+
+#===============================================================================
+# Dynamic Tier Selection (RARV-aware model routing)
+#===============================================================================
+# Maps RARV cycle phases to optimal model tiers:
+#   - Reason phase  -> planning tier (opus/xhigh/high)
+#   - Act phase     -> development tier (sonnet/high/medium)
+#   - Reflect phase -> development tier (sonnet/high/medium)
+#   - Verify phase  -> fast tier (haiku/low/low)
+
+# Global tier for current iteration (set by get_rarv_tier)
+CURRENT_TIER="development"
+
+# Get the appropriate tier based on RARV cycle step
+# Args: iteration_count (defaults to ITERATION_COUNT)
+# Returns: tier name (planning, development, fast)
+get_rarv_tier() {
+    local iteration="${1:-$ITERATION_COUNT}"
+    local rarv_step=$((iteration % 4))
+
+    case $rarv_step in
+        0)  # Reason phase - planning/architecture
+            echo "planning"
+            ;;
+        1)  # Act phase - implementation
+            echo "development"
+            ;;
+        2)  # Reflect phase - review/analysis
+            echo "development"
+            ;;
+        3)  # Verify phase - testing/validation
+            echo "fast"
+            ;;
+        *)  # Fallback to development
+            echo "development"
+            ;;
+    esac
+}
+
+# Get RARV phase name for logging
+get_rarv_phase_name() {
+    local iteration="${1:-$ITERATION_COUNT}"
+    local rarv_step=$((iteration % 4))
+
+    case $rarv_step in
+        0) echo "REASON" ;;
+        1) echo "ACT" ;;
+        2) echo "REFLECT" ;;
+        3) echo "VERIFY" ;;
+        *) echo "UNKNOWN" ;;
+    esac
+}
+
+# Get provider-specific tier parameter based on current tier
+# Uses provider config variables for the tier mapping
+get_provider_tier_param() {
+    local tier="${1:-$CURRENT_TIER}"
+
+    case "${PROVIDER_NAME:-claude}" in
+        claude)
+            case "$tier" in
+                planning) echo "${PROVIDER_MODEL_PLANNING:-opus}" | sed 's/claude-\([a-z]*\).*/\1/' ;;
+                development) echo "${PROVIDER_MODEL_DEVELOPMENT:-sonnet}" | sed 's/claude-\([a-z]*\).*/\1/' ;;
+                fast) echo "${PROVIDER_MODEL_FAST:-haiku}" | sed 's/claude-\([a-z]*\).*/\1/' ;;
+                *) echo "sonnet" ;;
+            esac
+            ;;
+        codex)
+            case "$tier" in
+                planning) echo "${PROVIDER_EFFORT_PLANNING:-xhigh}" ;;
+                development) echo "${PROVIDER_EFFORT_DEVELOPMENT:-high}" ;;
+                fast) echo "${PROVIDER_EFFORT_FAST:-low}" ;;
+                *) echo "high" ;;
+            esac
+            ;;
+        gemini)
+            case "$tier" in
+                planning) echo "${PROVIDER_THINKING_PLANNING:-high}" ;;
+                development) echo "${PROVIDER_THINKING_DEVELOPMENT:-medium}" ;;
+                fast) echo "${PROVIDER_THINKING_FAST:-low}" ;;
+                *) echo "medium" ;;
+            esac
+            ;;
+        *)
+            echo "development"
             ;;
     esac
 }
@@ -1155,9 +1282,15 @@ remove_worktree() {
         wait "$pid" 2>/dev/null || true
     fi
 
-    # Remove worktree
-    git -C "$TARGET_DIR" worktree remove "$worktree_path" --force 2>/dev/null || \
-    rm -rf "$worktree_path" 2>/dev/null
+    # Remove worktree (with safety check for rm -rf)
+    git -C "$TARGET_DIR" worktree remove "$worktree_path" --force 2>/dev/null || {
+        # Safety check: only rm -rf if path looks like a worktree (contains .git or is under TARGET_DIR)
+        if [[ -n "$worktree_path" && "$worktree_path" != "/" && "$worktree_path" == "$TARGET_DIR"* ]]; then
+            rm -rf "$worktree_path" 2>/dev/null
+        else
+            log_warn "Skipping unsafe rm -rf for path: $worktree_path"
+        fi
+    }
 
     unset WORKTREE_PATHS[$stream_name]
     unset WORKTREE_PIDS[$stream_name]
@@ -1192,13 +1325,40 @@ spawn_worktree_session() {
     local log_file="$worktree_path/.loki/logs/session-${stream_name}.log"
     mkdir -p "$(dirname "$log_file")"
 
-    log_step "Spawning Claude session: $stream_name"
+    # Check provider parallel support
+    if [ "${PROVIDER_HAS_PARALLEL:-false}" != "true" ]; then
+        log_warn "Provider ${PROVIDER_NAME:-unknown} does not support parallel sessions"
+        log_warn "Running sequentially instead (degraded mode)"
+        return 1
+    fi
+
+    log_step "Spawning ${PROVIDER_DISPLAY_NAME:-Claude} session: $stream_name"
 
     (
         cd "$worktree_path"
-        claude --dangerously-skip-permissions \
-            -p "Loki Mode: $task_prompt. Read .loki/CONTINUITY.md for context." \
-            >> "$log_file" 2>&1
+        # Provider-specific invocation for parallel sessions
+        case "${PROVIDER_NAME:-claude}" in
+            claude)
+                claude --dangerously-skip-permissions \
+                    -p "Loki Mode: $task_prompt. Read .loki/CONTINUITY.md for context." \
+                    >> "$log_file" 2>&1
+                ;;
+            codex)
+                codex exec --dangerously-bypass-approvals-and-sandbox \
+                    "Loki Mode: $task_prompt. Read .loki/CONTINUITY.md for context." \
+                    >> "$log_file" 2>&1
+                ;;
+            gemini)
+                # Note: -p flag is DEPRECATED per gemini --help. Using positional prompt.
+                gemini --yolo \
+                    "Loki Mode: $task_prompt. Read .loki/CONTINUITY.md for context." \
+                    >> "$log_file" 2>&1
+                ;;
+            *)
+                log_error "Unknown provider: ${PROVIDER_NAME}"
+                return 1
+                ;;
+        esac
     ) &
 
     local pid=$!
@@ -1263,17 +1423,33 @@ resolve_conflicts_with_ai() {
         # Get conflict markers
         local conflict_content=$(cat "$file")
 
-        # Use Claude to resolve conflict
-        local resolution=$(claude --dangerously-skip-permissions -p "
-You are resolving a git merge conflict. The file below contains conflict markers.
+        # Use AI to resolve conflict (provider-aware)
+        local resolution=""
+        local conflict_prompt="You are resolving a git merge conflict. The file below contains conflict markers.
 Your task is to merge both changes intelligently, preserving functionality from both sides.
 
 FILE: $file
 CONTENT:
 $conflict_content
 
-Output ONLY the resolved file content with no conflict markers. No explanations.
-" --output-format text 2>/dev/null)
+Output ONLY the resolved file content with no conflict markers. No explanations."
+
+        case "${PROVIDER_NAME:-claude}" in
+            claude)
+                resolution=$(claude --dangerously-skip-permissions -p "$conflict_prompt" --output-format text 2>/dev/null)
+                ;;
+            codex)
+                resolution=$(codex exec --dangerously-bypass-approvals-and-sandbox "$conflict_prompt" 2>/dev/null)
+                ;;
+            gemini)
+                # Note: -p flag is DEPRECATED per gemini --help. Using positional prompt.
+                resolution=$(gemini --yolo "$conflict_prompt" 2>/dev/null)
+                ;;
+            *)
+                log_error "Unknown provider: ${PROVIDER_NAME}"
+                return 1
+                ;;
+        esac
 
         if [ -n "$resolution" ]; then
             echo "$resolution" > "$file"
@@ -1478,15 +1654,31 @@ check_prerequisites() {
 
     local missing=()
 
-    # Check Claude Code CLI
-    log_step "Checking Claude Code CLI..."
-    if command -v claude &> /dev/null; then
-        local version=$(claude --version 2>/dev/null | head -1 || echo "unknown")
-        log_info "Claude Code CLI: $version"
+    # Check Provider CLI (uses PROVIDER_CLI from loaded provider config)
+    local cli_name="${PROVIDER_CLI:-claude}"
+    local display_name="${PROVIDER_DISPLAY_NAME:-Claude Code}"
+    log_step "Checking $display_name CLI..."
+    if command -v "$cli_name" &> /dev/null; then
+        local version=$("$cli_name" --version 2>/dev/null | head -1 || echo "unknown")
+        log_info "$display_name CLI: $version"
     else
-        missing+=("claude")
-        log_error "Claude Code CLI not found"
-        log_info "Install: https://claude.ai/code or npm install -g @anthropic-ai/claude-code"
+        missing+=("$cli_name")
+        log_error "$display_name CLI not found"
+        case "$cli_name" in
+            claude)
+                log_info "Install: https://claude.ai/code or npm install -g @anthropic-ai/claude-code"
+                ;;
+            codex)
+                log_info "Install: npm install -g @openai/codex"
+                ;;
+            gemini)
+                # TODO: Verify official Gemini CLI package name when available
+                log_info "Install: npm install -g @google/gemini-cli (or visit https://ai.google.dev/)"
+                ;;
+            *)
+                log_info "Install the $cli_name CLI for your provider"
+                ;;
+        esac
     fi
 
     # Check Python 3
@@ -1560,8 +1752,16 @@ check_prerequisites() {
 check_skill_installed() {
     log_header "Checking Loki Mode Skill"
 
-    local skill_locations=(
-        "$HOME/.claude/skills/loki-mode/SKILL.md"
+    # Build skill locations array dynamically based on provider
+    local skill_locations=()
+
+    # Add provider-specific skill directory if set (e.g., ~/.claude/skills for Claude)
+    if [ -n "${PROVIDER_SKILL_DIR:-}" ]; then
+        skill_locations+=("${PROVIDER_SKILL_DIR}/loki-mode/SKILL.md")
+    fi
+
+    # Add local project skill locations
+    skill_locations+=(
         ".claude/skills/loki-mode/SKILL.md"
         "$PROJECT_DIR/SKILL.md"
     )
@@ -1573,7 +1773,14 @@ check_skill_installed() {
         fi
     done
 
-    log_warn "Loki Mode skill not found in standard locations"
+    # For providers without skill system (Codex, Gemini), this is expected
+    if [ -z "${PROVIDER_SKILL_DIR:-}" ]; then
+        log_info "Provider ${PROVIDER_NAME:-unknown} has no native skill directory"
+        log_info "Skill will be passed via prompt injection"
+    else
+        log_warn "Loki Mode skill not found in standard locations"
+    fi
+
     log_info "The skill will be used from: $PROJECT_DIR/SKILL.md"
 
     if [ -f "$PROJECT_DIR/SKILL.md" ]; then
@@ -2133,7 +2340,7 @@ generate_dashboard() {
         <div class="column failed"><h2>Failed <span class="count" id="failed-badge">0</span></h2><div id="failed-tasks"></div></div>
     </div>
     <div class="updated" id="updated">Last updated: -</div>
-    <div class="powered-by">Powered by <span>Claude</span></div>
+    <div class="powered-by">Powered by <span>${PROVIDER_DISPLAY_NAME:-Claude}</span></div>
     <button class="refresh" onclick="loadData()">Refresh</button>
     <script>
         async function loadJSON(path) {
@@ -2688,9 +2895,33 @@ calculate_wait() {
 # Rate Limit Detection
 #===============================================================================
 
-# Detect rate limit from log and calculate wait time until reset
-# Returns: seconds to wait, or 0 if no rate limit detected
-detect_rate_limit() {
+# Detect if output contains rate limit indicators (provider-agnostic)
+# Returns: 0 if rate limit detected, 1 otherwise
+is_rate_limited() {
+    local log_file="$1"
+
+    # Generic patterns that work across all providers
+    # - HTTP 429 status code
+    # - "rate limit" / "rate-limit" / "ratelimit" text
+    # - "too many requests" text
+    # - "quota exceeded" text
+    # - "request limit" text
+    # - "retry after" / "retry-after" headers
+    if grep -qiE '(429|rate.?limit|too many requests|quota exceeded|request limit|retry.?after)' "$log_file" 2>/dev/null; then
+        return 0
+    fi
+
+    # Claude-specific: "resets Xam/pm" format
+    if grep -qE 'resets [0-9]+[ap]m' "$log_file" 2>/dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Parse Claude-specific reset time from log
+# Returns: seconds to wait, or 0 if no reset time found
+parse_claude_reset_time() {
     local log_file="$1"
 
     # Look for rate limit message like "resets 4am" or "resets 10pm"
@@ -2730,6 +2961,84 @@ detect_rate_limit() {
 
     # Add 2 minute buffer to ensure limit is actually reset
     wait_secs=$((wait_secs + 120))
+
+    echo $wait_secs
+}
+
+# Parse Retry-After header value (common across providers)
+# Returns: seconds to wait, or 0 if not found
+parse_retry_after() {
+    local log_file="$1"
+
+    # Look for Retry-After header (case insensitive)
+    # Format: "Retry-After: 60" or "retry-after: 60"
+    local retry_secs=$(grep -ioE 'retry.?after:?\s*[0-9]+' "$log_file" 2>/dev/null | tail -1 | grep -oE '[0-9]+$')
+
+    if [ -n "$retry_secs" ]; then
+        echo "$retry_secs"
+    else
+        echo 0
+    fi
+}
+
+# Calculate default backoff based on provider rate limit
+# Uses PROVIDER_RATE_LIMIT_RPM from loaded provider config
+# Returns: seconds to wait
+calculate_rate_limit_backoff() {
+    local rpm="${PROVIDER_RATE_LIMIT_RPM:-50}"
+
+    # Calculate wait time based on RPM
+    # If RPM is 50, that's ~1.2 requests per second
+    # Default backoff: 60 seconds / RPM * 60 = wait for 1 minute window
+    # But add some buffer, so wait for 2 minute windows
+    local wait_secs=$((120 * 60 / rpm))
+
+    # Minimum 60 seconds, maximum 300 seconds for default backoff
+    if [ "$wait_secs" -lt 60 ]; then
+        wait_secs=60
+    elif [ "$wait_secs" -gt 300 ]; then
+        wait_secs=300
+    fi
+
+    echo $wait_secs
+}
+
+# Detect rate limit from log and calculate wait time until reset
+# Provider-agnostic: checks generic patterns first, then provider-specific
+# Returns: seconds to wait, or 0 if no rate limit detected
+detect_rate_limit() {
+    local log_file="$1"
+
+    # First check if rate limited at all
+    if ! is_rate_limited "$log_file"; then
+        echo 0
+        return
+    fi
+
+    # Rate limit detected - now determine wait time
+    local wait_secs=0
+
+    # Try provider-specific reset time parsing
+    case "${PROVIDER_NAME:-claude}" in
+        claude)
+            wait_secs=$(parse_claude_reset_time "$log_file")
+            ;;
+        codex|gemini|*)
+            # No provider-specific reset time format known
+            # Fall through to generic parsing
+            ;;
+    esac
+
+    # If no provider-specific time, try generic Retry-After header
+    if [ "$wait_secs" -eq 0 ]; then
+        wait_secs=$(parse_retry_after "$log_file")
+    fi
+
+    # If still no specific time, use calculated backoff based on provider RPM
+    if [ "$wait_secs" -eq 0 ]; then
+        wait_secs=$(calculate_rate_limit_backoff)
+        log_debug "Using calculated backoff (${PROVIDER_RATE_LIMIT_RPM:-50} RPM): ${wait_secs}s"
+    fi
 
     echo $wait_secs
 }
@@ -3035,24 +3344,40 @@ run_autonomous() {
 
         save_state $retry "running" 0
 
-        # Run Claude Code with live output
+        # Run AI provider with live output
         local start_time=$(date +%s)
         local log_file=".loki/logs/autonomy-$(date +%Y%m%d).log"
 
         echo ""
         echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo -e "${CYAN}  CLAUDE CODE OUTPUT (live)${NC}"
+        echo -e "${CYAN}  ${PROVIDER_DISPLAY_NAME:-CLAUDE CODE} OUTPUT (live)${NC}"
+        if [ "${PROVIDER_DEGRADED:-false}" = "true" ]; then
+            echo -e "${YELLOW}  [DEGRADED MODE: Sequential execution only]${NC}"
+        fi
         echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo ""
 
         # Log start time
         echo "=== Session started at $(date) ===" >> "$log_file"
+        echo "=== Provider: ${PROVIDER_NAME:-claude} ===" >> "$log_file"
         echo "=== Prompt: $prompt ===" >> "$log_file"
 
+        # Dynamic tier selection based on RARV cycle phase
+        CURRENT_TIER=$(get_rarv_tier "$ITERATION_COUNT")
+        local rarv_phase=$(get_rarv_phase_name "$ITERATION_COUNT")
+        local tier_param=$(get_provider_tier_param "$CURRENT_TIER")
+        echo "=== RARV Phase: $rarv_phase, Tier: $CURRENT_TIER ($tier_param) ===" >> "$log_file"
+        log_info "RARV Phase: $rarv_phase -> Tier: $CURRENT_TIER ($tier_param)"
+
         set +e
-        # Run Claude with stream-json for real-time output
-        # Parse JSON stream, display formatted output, and track agents
-        claude --dangerously-skip-permissions -p "$prompt" \
+        # Provider-specific invocation with dynamic tier selection
+        case "${PROVIDER_NAME:-claude}" in
+            claude)
+                # Claude: Full features with stream-json output and agent tracking
+                # Uses dynamic tier for model selection based on RARV phase
+                # Pass tier to Python via environment for dashboard display
+                LOKI_CURRENT_MODEL="$tier_param" \
+                claude --dangerously-skip-permissions --model "$tier_param" -p "$prompt" \
             --output-format stream-json --verbose 2>&1 | \
             tee -a "$log_file" | \
             python3 -u -c '
@@ -3069,6 +3394,9 @@ MAGENTA = "\033[0;35m"
 DIM = "\033[2m"
 NC = "\033[0m"
 
+# Get current model tier from environment (set by run.sh dynamic tier selection)
+CURRENT_MODEL = os.environ.get("LOKI_CURRENT_MODEL", "sonnet")
+
 # Agent tracking
 AGENTS_FILE = ".loki/state/agents.json"
 QUEUE_IN_PROGRESS = ".loki/queue/in-progress.json"
@@ -3082,7 +3410,7 @@ def init_orchestrator():
         "agent_id": orchestrator_id,
         "tool_id": orchestrator_id,
         "agent_type": "orchestrator",
-        "model": "sonnet",
+        "model": CURRENT_MODEL,
         "current_task": "Initializing...",
         "status": "active",
         "spawned_at": session_start,
@@ -3256,7 +3584,35 @@ if __name__ == "__main__":
     except BrokenPipeError:
         sys.exit(0)
 '
-        local exit_code=${PIPESTATUS[0]}
+                local exit_code=${PIPESTATUS[0]}
+                ;;
+
+            codex)
+                # Codex: Degraded mode - no stream-json, no agent tracking
+                # Uses positional prompt after exec subcommand
+                # Note: Effort is set via env var, not CLI flag
+                # Uses dynamic tier from RARV phase (tier_param already set above)
+                CODEX_MODEL_REASONING_EFFORT="$tier_param" \
+                codex exec --dangerously-bypass-approvals-and-sandbox \
+                    "$prompt" 2>&1 | tee -a "$log_file"
+                local exit_code=${PIPESTATUS[0]}
+                ;;
+
+            gemini)
+                # Gemini: Degraded mode - no stream-json, no agent tracking
+                # Note: Thinking level is set via settings.json, not CLI flag
+                # Log the dynamic tier for debugging (tier_param already set above)
+                echo "[loki] Gemini thinking tier: $tier_param (configure in ~/.gemini/settings.json)" >> "$log_file"
+                gemini --yolo \
+                    "$prompt" 2>&1 | tee -a "$log_file"
+                local exit_code=${PIPESTATUS[0]}
+                ;;
+
+            *)
+                log_error "Unknown provider: ${PROVIDER_NAME:-unknown}"
+                local exit_code=1
+                ;;
+        esac
         set -e
 
         echo ""
@@ -3269,7 +3625,7 @@ if __name__ == "__main__":
         local end_time=$(date +%s)
         local duration=$((end_time - start_time))
 
-        log_info "Claude exited with code $exit_code after ${duration}s"
+        log_info "${PROVIDER_DISPLAY_NAME:-Claude} exited with code $exit_code after ${duration}s"
         save_state $retry "exited" $exit_code
 
         # Check for success - ONLY stop on explicit completion promise
@@ -3294,7 +3650,7 @@ if __name__ == "__main__":
 
             # Warn if Claude says it's "done" but no explicit promise
             if is_completed; then
-                log_warn "Claude claims completion, but no explicit promise fulfilled."
+                log_warn "${PROVIDER_DISPLAY_NAME:-Claude} claims completion, but no explicit promise fulfilled."
                 log_warn "Projects are never truly complete - there are always improvements!"
             fi
 
@@ -3504,28 +3860,76 @@ main() {
 
     # Parse arguments
     PRD_PATH=""
-    for arg in "$@"; do
-        case "$arg" in
+    REMAINING_ARGS=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
             --parallel)
                 PARALLEL_MODE=true
+                shift
+                ;;
+            --provider)
+                if [[ -n "${2:-}" ]]; then
+                    LOKI_PROVIDER="$2"
+                    # Reload provider config
+                    if [ -f "$PROVIDERS_DIR/loader.sh" ]; then
+                        if ! validate_provider "$LOKI_PROVIDER"; then
+                            log_error "Unknown provider: $LOKI_PROVIDER"
+                            log_info "Supported providers: ${SUPPORTED_PROVIDERS[*]}"
+                            exit 1
+                        fi
+                        if ! load_provider "$LOKI_PROVIDER"; then
+                            log_error "Failed to load provider config: $LOKI_PROVIDER"
+                            exit 1
+                        fi
+                    fi
+                    shift 2
+                else
+                    log_error "--provider requires a value (claude, codex, gemini)"
+                    exit 1
+                fi
+                ;;
+            --provider=*)
+                LOKI_PROVIDER="${1#*=}"
+                # Reload provider config
+                if [ -f "$PROVIDERS_DIR/loader.sh" ]; then
+                    if ! validate_provider "$LOKI_PROVIDER"; then
+                        log_error "Unknown provider: $LOKI_PROVIDER"
+                        log_info "Supported providers: ${SUPPORTED_PROVIDERS[*]}"
+                        exit 1
+                    fi
+                    if ! load_provider "$LOKI_PROVIDER"; then
+                        log_error "Failed to load provider config: $LOKI_PROVIDER"
+                        exit 1
+                    fi
+                fi
+                shift
                 ;;
             --help|-h)
                 echo "Usage: ./autonomy/run.sh [OPTIONS] [PRD_PATH]"
                 echo ""
                 echo "Options:"
-                echo "  --parallel    Enable git worktree-based parallel workflows"
-                echo "  --help, -h    Show this help message"
+                echo "  --parallel           Enable git worktree-based parallel workflows"
+                echo "  --provider <name>    Provider: claude (default), codex, gemini"
+                echo "  --help, -h           Show this help message"
                 echo ""
                 echo "Environment variables: See header comments in this script"
+                echo ""
+                echo "Provider capabilities:"
+                if [ -f "$PROVIDERS_DIR/loader.sh" ]; then
+                    print_capability_matrix
+                fi
                 exit 0
                 ;;
             *)
-                if [ -z "$PRD_PATH" ]; then
-                    PRD_PATH="$arg"
+                if [ -z "$PRD_PATH" ] && [[ ! "$1" == -* ]]; then
+                    PRD_PATH="$1"
                 fi
+                REMAINING_ARGS+=("$1")
+                shift
                 ;;
         esac
     done
+    set -- "${REMAINING_ARGS[@]}"
 
     # Validate PRD if provided
     if [ -n "$PRD_PATH" ] && [ ! -f "$PRD_PATH" ]; then
@@ -3533,9 +3937,28 @@ main() {
         exit 1
     fi
 
+    # Show provider info
+    log_info "Provider: ${PROVIDER_DISPLAY_NAME:-Claude Code} (${PROVIDER_NAME:-claude})"
+    if [ "${PROVIDER_DEGRADED:-false}" = "true" ]; then
+        log_warn "Degraded mode: Parallel agents and Task tool not available"
+        # Check if array exists and has elements before iterating
+        if [ -n "${PROVIDER_DEGRADED_REASONS+x}" ] && [ ${#PROVIDER_DEGRADED_REASONS[@]} -gt 0 ]; then
+            log_info "Limitations:"
+            for reason in "${PROVIDER_DEGRADED_REASONS[@]}"; do
+                log_info "  - $reason"
+            done
+        fi
+    fi
+
     # Show parallel mode status
     if [ "$PARALLEL_MODE" = "true" ]; then
-        log_info "Parallel mode enabled (git worktrees)"
+        if [ "${PROVIDER_HAS_PARALLEL:-false}" = "true" ]; then
+            log_info "Parallel mode enabled (git worktrees)"
+        else
+            log_warn "Parallel mode requested but not supported by ${PROVIDER_NAME:-unknown}"
+            log_warn "Running in sequential mode instead"
+            PARALLEL_MODE=false
+        fi
     fi
 
     # Check prerequisites (unless skipped)

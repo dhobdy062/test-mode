@@ -3,11 +3,11 @@ name: loki-mode
 description: Multi-agent autonomous startup system. Triggers on "Loki Mode". Takes PRD to deployed product with zero human intervention. Requires --dangerously-skip-permissions flag.
 ---
 
-# Loki Mode v4.2.0
+# Loki Mode v5.0.0
 
 **You are an autonomous agent. You make decisions. You do not ask questions. You do not stop.**
 
-**New in v4.2.0:** Foundational Principles (WHY behind rules), Priority Order for conflict resolution, Memory > Reasoning insight. See `autonomy/CONSTITUTION.md`.
+**New in v5.0.0:** Multi-provider support (Claude/Codex/Gemini), abstract model tiers, degraded mode for non-Claude providers. See `skills/providers.md`.
 
 ---
 
@@ -75,19 +75,21 @@ These rules are ABSOLUTE. Violating them is a critical failure.
 
 ## Model Selection
 
-| Task Type | Model | Reason |
-|-----------|-------|--------|
-| PRD analysis, architecture, system design | **opus** | Deep reasoning required |
-| Feature implementation, complex bugs | **sonnet** | Development workload |
-| Code review (always 3 parallel reviewers) | **sonnet** | Balanced quality/cost |
-| Integration tests, E2E, deployment | **sonnet** | Functional verification |
-| Unit tests, linting, docs, simple fixes | **haiku** | Fast, parallelizable |
+| Task Type | Tier | Claude | Codex | Gemini |
+|-----------|------|--------|-------|--------|
+| PRD analysis, architecture, system design | **planning** | opus | effort=xhigh | thinking=high |
+| Feature implementation, complex bugs | **development** | sonnet | effort=high | thinking=medium |
+| Code review (always 3 parallel reviewers) | **development** | sonnet | effort=high | thinking=medium |
+| Integration tests, E2E, deployment | **development** | sonnet | effort=high | thinking=medium |
+| Unit tests, linting, docs, simple fixes | **fast** | haiku | effort=low | thinking=low |
 
-**Parallelization rule:** Launch up to 10 haiku agents simultaneously for independent tasks.
+**Parallelization rule (Claude only):** Launch up to 10 haiku agents simultaneously for independent tasks.
+
+**Degraded mode (Codex/Gemini):** No parallel agents or Task tool. Runs RARV cycle sequentially. See `skills/model-selection.md`.
 
 **Git worktree parallelism:** For true parallel feature development, use `--parallel` flag with run.sh. See `skills/parallel-workflows.md`.
 
-**Scale patterns (50+ agents):** Use judge agents, recursive sub-planners, optimistic concurrency. See `references/cursor-learnings.md`.
+**Scale patterns (50+ agents, Claude only):** Use judge agents, recursive sub-planners, optimistic concurrency. See `references/cursor-learnings.md`.
 
 ---
 
@@ -152,13 +154,26 @@ GROWTH ──[continuous improvement loop]──> GROWTH
 ## Invocation
 
 ```bash
-# Standard mode
+# Standard mode (Claude - full features)
 claude --dangerously-skip-permissions
 # Then say: "Loki Mode" or "Loki Mode with PRD at path/to/prd.md"
 
-# Parallel mode (git worktrees)
+# With provider selection
+./autonomy/run.sh --provider claude ./prd.md   # Default, full features
+./autonomy/run.sh --provider codex ./prd.md    # GPT-5.2 Codex, degraded mode
+./autonomy/run.sh --provider gemini ./prd.md   # Gemini 3 Pro, degraded mode
+
+# Or via CLI wrapper
+loki start --provider codex ./prd.md
+
+# Parallel mode (git worktrees, Claude only)
 ./autonomy/run.sh --parallel ./prd.md
 ```
+
+**Provider capabilities:**
+- **Claude**: Full features (Task tool, parallel agents, MCP, 200K context)
+- **Codex**: Degraded mode (sequential only, no Task tool, 128K context)
+- **Gemini**: Degraded mode (sequential only, no Task tool, 1M context)
 
 ---
 
@@ -188,4 +203,4 @@ Auto-detected or force with `LOKI_COMPLEXITY`:
 
 ---
 
-**v4.2.0 | Foundational Principles | ~190 lines core**
+**v5.0.0 | Multi-Provider Support | ~210 lines core**

@@ -3,7 +3,7 @@
 # Provides true autonomy by auto-resuming on rate limits or interruptions
 #
 # How it works:
-# 1. Launches Claude Code with Loki Mode prompt
+# 1. Launches AI provider CLI with Loki Mode prompt (supports Claude, Codex, Gemini)
 # 2. Monitors the process - when Claude exits, checks exit code
 # 3. On rate limit (exit code != 0), waits with exponential backoff
 # 4. Restarts automatically, telling Claude to resume from checkpoint
@@ -15,6 +15,29 @@
 #   ./scripts/loki-wrapper.sh  # Interactive mode
 
 set -uo pipefail
+
+# Determine script directory for relative imports
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Source provider loader for multi-provider support
+if [[ -f "$PROJECT_ROOT/providers/loader.sh" ]]; then
+    # shellcheck source=../providers/loader.sh
+    source "$PROJECT_ROOT/providers/loader.sh"
+
+    # Load the configured provider (defaults to claude)
+    LOKI_PROVIDER="${LOKI_PROVIDER:-$DEFAULT_PROVIDER}"
+    if ! load_provider "$LOKI_PROVIDER"; then
+        echo "ERROR: Failed to load provider: $LOKI_PROVIDER" >&2
+        exit 1
+    fi
+else
+    # Fallback to hardcoded claude if providers not available
+    PROVIDER_CLI="claude"
+    PROVIDER_AUTONOMOUS_FLAG="--dangerously-skip-permissions"
+    PROVIDER_PROMPT_FLAG="-p"
+    PROVIDER_DISPLAY_NAME="Claude Code"
+fi
 
 # Configuration
 MAX_RETRIES=${LOKI_MAX_RETRIES:-50}           # Maximum retry attempts
@@ -183,7 +206,7 @@ main() {
         log_info "Prompt: $prompt"
         save_state $retry "running" 0
 
-        # Launch Claude Code
+        # Launch provider CLI
         # The process exits when:
         # 1. User types /exit or Ctrl+C (exit 0)
         # 2. Rate limit hit (exit 1 or other non-zero)
@@ -192,17 +215,17 @@ main() {
 
         local start_time=$(date +%s)
 
-        # Run Claude Code with the prompt
-        # Using -p for non-interactive prompt mode
+        # Run provider CLI with the prompt
+        # Using provider-specific prompt flag for non-interactive mode
         set +e
-        claude --dangerously-skip-permissions -p "$prompt" 2>&1 | tee -a "$LOG_FILE"
+        "$PROVIDER_CLI" $PROVIDER_AUTONOMOUS_FLAG $PROVIDER_PROMPT_FLAG "$prompt" 2>&1 | tee -a "$LOG_FILE"
         local exit_code=${PIPESTATUS[0]}
         set -e
 
         local end_time=$(date +%s)
         local duration=$((end_time - start_time))
 
-        log_info "Claude exited with code $exit_code after ${duration}s"
+        log_info "$PROVIDER_DISPLAY_NAME exited with code $exit_code after ${duration}s"
         save_state $retry "exited" $exit_code
 
         # Check for successful completion
@@ -212,7 +235,7 @@ main() {
                 save_state $retry "completed" 0
                 exit 0
             else
-                log_info "Claude exited cleanly but work may not be complete"
+                log_info "$PROVIDER_DISPLAY_NAME exited cleanly but work may not be complete"
                 log_info "Checking if we should continue..."
 
                 # If session was short, might be intentional exit
@@ -270,10 +293,12 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-# Check for claude command
-if ! command -v claude &> /dev/null; then
-    log_error "Claude Code CLI not found. Please install it first."
-    log_info "Visit: https://claude.ai/code"
+# Check for provider CLI command
+if ! command -v "$PROVIDER_CLI" &> /dev/null; then
+    log_error "$PROVIDER_DISPLAY_NAME CLI ($PROVIDER_CLI) not found. Please install it first."
+    if [[ "$PROVIDER_CLI" == "claude" ]]; then
+        log_info "Visit: https://claude.ai/code"
+    fi
     exit 1
 fi
 

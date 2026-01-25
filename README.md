@@ -68,10 +68,37 @@ loki start ./my-prd.md
 ### Option 5: Docker
 
 ```bash
-docker run -v $(pwd):/workspace asklokesh/loki-mode:4.2.0 ./my-prd.md
+docker run -v $(pwd):/workspace asklokesh/loki-mode:5.0.0 ./my-prd.md
 ```
 
 See [Installation Guide](docs/INSTALLATION.md) for more details.
+
+### Multi-Provider Support (v5.0.0)
+
+Loki Mode supports three AI providers:
+
+```bash
+# Claude Code (default - full features)
+loki start --provider claude ./my-prd.md
+
+# OpenAI Codex CLI (degraded mode)
+loki start --provider codex ./my-prd.md
+
+# Google Gemini CLI (degraded mode)
+loki start --provider gemini ./my-prd.md
+
+# Or via environment variable
+LOKI_PROVIDER=codex loki start ./my-prd.md
+```
+
+**Provider Comparison:**
+| Provider | Features | Parallel Agents | Task Tool |
+|----------|----------|-----------------|-----------|
+| Claude | Full | Yes (10+) | Yes |
+| Codex | Degraded | No | No |
+| Gemini | Degraded | No | No |
+
+See [skills/providers.md](skills/providers.md) for full provider documentation.
 
 ---
 
@@ -144,6 +171,7 @@ PRD → Research → Architecture → Development → Testing → Deployment →
 
 | Feature | Description | Documentation |
 |---------|-------------|---------------|
+| **Multi-Provider (v5.0.0)** | Claude, Codex, Gemini support | [Provider Guide](skills/providers.md) |
 | **CLI (v4.1.0)** | `loki` command for start/stop/pause/status | [CLI Commands](#cli-commands-v410) |
 | **Config Files** | YAML configuration support | [autonomy/config.example.yaml](autonomy/config.example.yaml) |
 | **Dashboard** | Realtime Kanban board, agent monitoring | [Dashboard Guide](docs/dashboard-guide.md) |
@@ -308,7 +336,7 @@ brew tap asklokesh/tap && brew install loki-mode
 loki-mode-install-skill  # Set up Claude Code integration
 
 # Option C: Docker
-docker pull asklokesh/loki-mode:4.1.0
+docker pull asklokesh/loki-mode:5.0.0
 
 # Option D: Git clone
 git clone https://github.com/asklokesh/loki-mode.git ~/.claude/skills/loki-mode
@@ -548,6 +576,7 @@ LOKI_MAX_WAIT=7200 \
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `LOKI_PROVIDER` | claude | AI provider: claude, codex, gemini |
 | `LOKI_MAX_RETRIES` | 50 | Maximum retry attempts before giving up |
 | `LOKI_BASE_WAIT` | 60 | Base wait time in seconds |
 | `LOKI_MAX_WAIT` | 3600 | Maximum wait time (1 hour) |

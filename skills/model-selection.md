@@ -1,28 +1,75 @@
 # Model Selection & Task Tool
 
+## Multi-Provider Support (v5.0.0)
+
+Loki Mode supports three AI providers. Claude has full features; Codex and Gemini run in **degraded mode** (sequential execution only, no Task tool, no parallel agents).
+
+| Provider | Full Features | Degraded | CLI Flag |
+|----------|---------------|----------|----------|
+| **Claude Code** | Yes | No | `--provider claude` (default) |
+| **OpenAI Codex CLI** | No | Yes | `--provider codex` |
+| **Google Gemini CLI** | No | Yes | `--provider gemini` |
+
+**Degraded mode limitations:**
+- No Task tool (cannot spawn subagents)
+- No parallel execution (sequential RARV cycle only)
+- No MCP server integration
+- Single model with parameter adjustment (effort/thinking level)
+
+---
+
+## Abstract Model Tiers
+
+| Tier | Purpose | Claude | Codex | Gemini |
+|------|---------|--------|-------|--------|
+| **planning** | PRD analysis, architecture, system design | opus | effort=xhigh | thinking=high |
+| **development** | Feature implementation, complex bugs, tests | sonnet | effort=high | thinking=medium |
+| **fast** | Unit tests, docs, linting, simple tasks | haiku | effort=low | thinking=low |
+
+---
+
 ## Model Selection by SDLC Phase
 
-| Model | SDLC Phases | Examples |
-|-------|-------------|----------|
-| **Opus 4.5** | Bootstrap, Discovery, Architecture | PRD analysis, system design, technology selection, API contracts |
-| **Sonnet 4.5** | Development, QA, Deployment | Feature implementation, complex bugs, integration/E2E tests, code review, deployment |
-| **Haiku 4.5** | All other operations (parallel) | Unit tests, docs, bash commands, linting, monitoring |
+| Tier | SDLC Phases | Examples |
+|------|-------------|----------|
+| **planning** | Bootstrap, Discovery, Architecture | PRD analysis, system design, technology selection, API contracts |
+| **development** | Development, QA, Deployment | Feature implementation, complex bugs, integration/E2E tests, code review, deployment |
+| **fast** | All other operations (parallel for Claude) | Unit tests, docs, bash commands, linting, monitoring |
 
-## Task Tool Examples
+**Claude-specific model names:** opus, sonnet, haiku
+**Codex effort levels:** xhigh, high, medium, low
+**Gemini thinking levels:** high, medium, low
+
+## Task Tool Examples (Claude Only)
+
+**NOTE:** Task tool is Claude-specific. Codex and Gemini run in degraded mode without subagents.
 
 ```python
-# Opus for Bootstrap, Discovery, Architecture (planning ONLY)
+# Planning tier (opus) for Bootstrap, Discovery, Architecture
 Task(subagent_type="Plan", model="opus", description="Design system architecture", prompt="...")
 Task(subagent_type="Plan", model="opus", description="Analyze PRD requirements", prompt="...")
 
-# Sonnet for Development, QA, and Deployment
+# Development tier (sonnet) for Development, QA, and Deployment
 Task(subagent_type="general-purpose", model="sonnet", description="Implement API endpoint", prompt="...")
 Task(subagent_type="general-purpose", model="sonnet", description="Write integration tests", prompt="...")
 Task(subagent_type="general-purpose", model="sonnet", description="Deploy to production", prompt="...")
 
-# Haiku for everything else (PREFER for parallelization)
+# Fast tier (haiku) for everything else (PREFER for parallelization)
 Task(subagent_type="general-purpose", model="haiku", description="Run unit tests", prompt="...")
 Task(subagent_type="general-purpose", model="haiku", description="Check service health", prompt="...")
+```
+
+### Provider Detection in Code
+
+```bash
+# In run.sh, check provider before using Task tool
+if [ "${PROVIDER_HAS_TASK_TOOL:-false}" = "true" ]; then
+    # Claude: Use Task tool with parallel agents
+    Task(model="haiku", description="Run tests", prompt="...")
+else
+    # Codex/Gemini: Run sequentially without subagents
+    # Execute RARV cycle in main thread
+fi
 ```
 
 ## Task Categories
@@ -45,14 +92,20 @@ Task(subagent_type="general-purpose", model="haiku", description="Check service 
 - File operations, linting, static analysis
 - Monitoring, health checks, log analysis
 
-## Parallelization Strategy
+## Parallelization Strategy (Claude Only)
+
+**NOTE:** Parallelization requires Task tool, which is Claude-specific. Codex and Gemini run sequentially.
 
 ```python
-# Launch 10+ Haiku agents in parallel for unit test suite
+# Claude: Launch 10+ Haiku agents in parallel for unit test suite
 for test_file in test_files:
     Task(subagent_type="general-purpose", model="haiku",
          description=f"Run unit tests: {test_file}",
          run_in_background=True)
+
+# Codex/Gemini: Run tests sequentially (no parallelization)
+for test_file in test_files:
+    run_test(test_file)  # Sequential execution
 ```
 
 ## Extended Thinking Mode

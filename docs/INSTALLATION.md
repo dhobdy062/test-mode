@@ -2,7 +2,7 @@
 
 Complete installation instructions for all platforms and use cases.
 
-**Version:** v4.1.0
+**Version:** v5.0.0
 
 ---
 
@@ -12,6 +12,7 @@ Complete installation instructions for all platforms and use cases.
 - [npm (Node.js)](#npm-nodejs)
 - [Homebrew (macOS/Linux)](#homebrew-macoslinux)
 - [Docker](#docker)
+- [Multi-Provider Support](#multi-provider-support)
 - [Claude Code (CLI)](#claude-code-cli)
 - [Claude.ai (Web)](#claudeai-web)
 - [Anthropic API Console](#anthropic-api-console)
@@ -32,7 +33,7 @@ npm install -g loki-mode
 brew tap asklokesh/tap && brew install loki-mode
 
 # Option C: Docker
-docker pull asklokesh/loki-mode:4.1.0
+docker pull asklokesh/loki-mode:5.0.0
 
 # Option D: Git clone
 git clone https://github.com/asklokesh/loki-mode.git ~/.claude/skills/loki-mode
@@ -151,7 +152,7 @@ Run Loki Mode in a container for isolated execution.
 
 ```bash
 # Pull the image
-docker pull asklokesh/loki-mode:4.1.0
+docker pull asklokesh/loki-mode:5.0.0
 
 # Or use docker-compose
 curl -o docker-compose.yml https://raw.githubusercontent.com/asklokesh/loki-mode/main/docker-compose.yml
@@ -161,10 +162,10 @@ curl -o docker-compose.yml https://raw.githubusercontent.com/asklokesh/loki-mode
 
 ```bash
 # Run with a PRD file
-docker run -v $(pwd):/workspace -w /workspace asklokesh/loki-mode:4.1.0 start ./my-prd.md
+docker run -v $(pwd):/workspace -w /workspace asklokesh/loki-mode:5.0.0 start ./my-prd.md
 
 # Interactive mode
-docker run -it -v $(pwd):/workspace -w /workspace asklokesh/loki-mode:4.1.0
+docker run -it -v $(pwd):/workspace -w /workspace asklokesh/loki-mode:5.0.0
 
 # Using docker-compose
 docker-compose run loki start ./my-prd.md
@@ -177,7 +178,7 @@ Pass your configuration via environment variables:
 ```bash
 docker run -e LOKI_MAX_RETRIES=100 -e LOKI_BASE_WAIT=120 \
   -v $(pwd):/workspace -w /workspace \
-  asklokesh/loki-mode:4.1.0 start ./my-prd.md
+  asklokesh/loki-mode:5.0.0 start ./my-prd.md
 ```
 
 ### Updating
@@ -187,6 +188,77 @@ docker pull asklokesh/loki-mode:latest
 ```
 
 ---
+
+## Multi-Provider Support
+
+Loki Mode v5.0.0 introduces support for multiple AI providers beyond Claude.
+
+### Supported Providers
+
+| Provider | Status | Notes |
+|----------|--------|-------|
+| `claude` | Full Support | Default provider, all features available |
+| `codex` | Degraded Mode | Core functionality only, some features unavailable |
+| `gemini` | Degraded Mode | Core functionality only, some features unavailable |
+
+### Configuration
+
+#### Environment Variable
+
+Set the `LOKI_PROVIDER` environment variable to select your provider:
+
+```bash
+# Use Claude (default)
+export LOKI_PROVIDER=claude
+
+# Use OpenAI Codex
+export LOKI_PROVIDER=codex
+
+# Use Google Gemini
+export LOKI_PROVIDER=gemini
+```
+
+#### CLI Flag
+
+Use the `--provider` flag when invoking Loki Mode:
+
+```bash
+# Use Claude (default)
+loki start ./my-prd.md --provider claude
+
+# Use OpenAI Codex
+loki start ./my-prd.md --provider codex
+
+# Use Google Gemini
+loki start ./my-prd.md --provider gemini
+```
+
+#### Docker
+
+Pass the provider as an environment variable:
+
+```bash
+# Use Codex with Docker
+docker run -e LOKI_PROVIDER=codex \
+  -v $(pwd):/workspace -w /workspace \
+  asklokesh/loki-mode:5.0.0 start ./my-prd.md
+
+# Use Gemini with Docker
+docker run -e LOKI_PROVIDER=gemini \
+  -v $(pwd):/workspace -w /workspace \
+  asklokesh/loki-mode:5.0.0 start ./my-prd.md
+```
+
+### Degraded Mode
+
+When using `codex` or `gemini` providers, Loki Mode operates in **degraded mode**:
+
+- Core autonomous workflow functions normally
+- Some advanced features may be unavailable or behave differently
+- Model-specific optimizations (Opus/Sonnet/Haiku routing) are adapted for each provider
+- Quality gates and RARV cycle remain fully functional
+
+**Recommendation:** For the best experience and full feature support, use the default `claude` provider.
 
 ---
 

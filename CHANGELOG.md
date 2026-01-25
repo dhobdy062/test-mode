@@ -5,6 +5,52 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-01-24
+
+### Added - Multi-Provider Support
+
+**Major release: Support for Claude Code, OpenAI Codex CLI, and Google Gemini CLI with degraded mode for non-Claude providers.**
+
+#### Provider System (`providers/`)
+- **claude.sh** - Full-featured provider (subagents, parallel, Task tool, MCP)
+- **codex.sh** - Degraded mode (effort parameter, sequential only)
+- **gemini.sh** - Degraded mode (thinking_level parameter, sequential only)
+- **loader.sh** - Provider loader with validation and capability matrix
+
+#### CLI Integration
+- `--provider` flag for run.sh and loki CLI
+- `LOKI_PROVIDER` environment variable (claude, codex, gemini)
+- Provider info display at startup
+- Capability matrix in `--help` output
+
+#### Abstract Model Tiers
+- **planning** - Architecture, PRD analysis (opus/xhigh/high)
+- **development** - Implementation, tests (sonnet/high/medium)
+- **fast** - Simple tasks, docs (haiku/low/low)
+
+#### Degraded Mode for Codex/Gemini
+- Sequential RARV cycle (no parallel agents)
+- No Task tool (cannot spawn subagents)
+- No MCP server integration
+- Model tier maps to provider-specific parameter
+
+#### Documentation
+- `skills/providers.md` - Provider comparison and usage guide
+- Updated `skills/model-selection.md` with provider-aware examples
+- Updated `skills/00-index.md` with providers module
+- Provider support matrix in README
+
+#### Files Added/Modified
+- `providers/claude.sh` - Claude Code provider config
+- `providers/codex.sh` - OpenAI Codex provider config
+- `providers/gemini.sh` - Gemini CLI provider config
+- `providers/loader.sh` - Provider loader utility
+- `skills/providers.md` - Provider documentation
+- `autonomy/run.sh` - Multi-provider invocation
+- `autonomy/loki` - CLI with --provider flag
+
+---
+
 ## [4.2.0] - 2026-01-22
 
 ### Added - Foundational Principles and Priority Order

@@ -13,7 +13,7 @@ const skillDir = path.join(homeDir, '.claude', 'skills', 'loki-mode');
 const packageDir = path.join(__dirname, '..');
 
 console.log('');
-console.log('Loki Mode v4.1.0 installed!');
+console.log('Loki Mode v5.0.0 installed!');
 console.log('');
 
 // Try to create skill symlink
@@ -50,9 +50,16 @@ try {
 
 console.log('');
 console.log('Usage:');
-console.log('  loki start [PRD]    - Start Loki Mode');
-console.log('  loki status         - Check status');
-console.log('  loki --help         - Show all commands');
+console.log('  loki start [PRD]              - Start with Claude (default)');
+console.log('  loki start --provider codex   - Start with OpenAI Codex');
+console.log('  loki start --provider gemini  - Start with Google Gemini');
+console.log('  loki status                   - Check status');
+console.log('  loki --help                   - Show all commands');
+console.log('');
+console.log('Providers:');
+console.log('  claude  - Full features (parallel agents, Task tool, MCP)');
+console.log('  codex   - Degraded mode (sequential only)');
+console.log('  gemini  - Degraded mode (sequential only)');
 console.log('');
 console.log('Or in Claude Code:');
 console.log('  claude --dangerously-skip-permissions');

@@ -15,10 +15,16 @@ claude --dangerously-skip-permissions
 ## Project Structure
 
 ```
-SKILL.md                    # Slim core skill (~190 lines) - progressive disclosure
+SKILL.md                    # Slim core skill (~210 lines) - progressive disclosure
+providers/                  # Multi-provider support (v5.0.0)
+  claude.sh                 # Claude Code - full features
+  codex.sh                  # OpenAI Codex CLI - degraded mode
+  gemini.sh                 # Google Gemini CLI - degraded mode
+  loader.sh                 # Provider loader utility
 skills/                     # On-demand skill modules (v3.0 architecture)
   00-index.md               # Module selection rules and routing
   model-selection.md        # Task tool, parallelization, thinking modes
+  providers.md              # Multi-provider documentation
   quality-gates.md          # 7-gate system, velocity-quality balance
   testing.md                # Playwright, E2E, property-based testing
   production.md             # HN patterns, CI/CD, context management
@@ -61,6 +67,18 @@ Every iteration follows: **R**eason -> **A**ct -> **R**eflect -> **V**erify
 - **Opus**: Planning and architecture ONLY (system design, high-level decisions)
 - **Sonnet**: Development and functional testing (implementation, integration tests)
 - **Haiku**: Unit tests, monitoring, and simple tasks - use extensively for parallelization
+
+### Multi-Provider Support (v5.0.0)
+- **Claude Code**: Full features (subagents, parallel, Task tool, MCP)
+- **OpenAI Codex CLI**: Degraded mode (sequential only, no Task tool)
+- **Google Gemini CLI**: Degraded mode (sequential only, no Task tool)
+
+```bash
+# Provider selection
+./autonomy/run.sh --provider codex ./prd.md
+loki start --provider gemini ./prd.md
+LOKI_PROVIDER=codex loki start ./prd.md
+```
 
 ### Quality Gates
 1. Static analysis (CodeQL, ESLint)
@@ -117,8 +135,8 @@ Prompt: "Review the following claims for factual accuracy.
 
 ### Version Numbering
 Follows semantic versioning: MAJOR.MINOR.PATCH
-- Current: v4.2.0
-- MAJOR bump for architecture changes (v4.0.0 = realtime dashboard)
+- Current: v5.0.0
+- MAJOR bump for architecture changes (v5.0.0 = multi-provider support)
 - MINOR bump for new features (v4.2.0 = foundational principles)
 - PATCH bump for fixes
 
