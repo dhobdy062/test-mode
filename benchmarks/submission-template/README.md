@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Loki Mode** is a multi-agent system built as a Claude Code skill that orchestrates specialized AI agents to solve software engineering tasks. This submission demonstrates its performance on SWE-bench Lite.
+**Loki Mode** is a multi-agent system that works with Claude Code, OpenAI Codex, and Google Gemini. It orchestrates specialized AI agents to solve software engineering tasks. This submission demonstrates its performance on SWE-bench Lite.
 
 ## Results
 

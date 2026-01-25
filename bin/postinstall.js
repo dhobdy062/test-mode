@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Loki Mode postinstall script
- * Sets up the Claude Code skill symlink
+ * Sets up the skill symlink for Claude Code, Codex CLI, and Gemini CLI
  */
 
 const fs = require('fs');
@@ -13,7 +13,7 @@ const skillDir = path.join(homeDir, '.claude', 'skills', 'loki-mode');
 const packageDir = path.join(__dirname, '..');
 
 console.log('');
-console.log('Loki Mode v5.0.0 installed!');
+console.log('Loki Mode v5.1.2 installed!');
 console.log('');
 
 // Try to create skill symlink

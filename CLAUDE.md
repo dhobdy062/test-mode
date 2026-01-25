@@ -1,6 +1,6 @@
 # Loki Mode - Claude Code Skill
 
-Multi-agent autonomous startup system for Claude Code. Takes PRD to fully deployed, revenue-generating product with zero human intervention.
+Multi-agent autonomous startup system for Claude Code, OpenAI Codex CLI, and Google Gemini CLI. Takes PRD to fully deployed, revenue-generating product with zero human intervention.
 
 ## Quick Start
 

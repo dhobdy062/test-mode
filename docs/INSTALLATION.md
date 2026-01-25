@@ -264,7 +264,7 @@ When using `codex` or `gemini` providers, Loki Mode operates in **degraded mode*
 
 ## Claude Code (CLI)
 
-Loki Mode can be installed for Claude Code in three ways:
+Loki Mode can be installed as a skill in three ways:
 
 ### Option A: Git Clone (Recommended)
 
