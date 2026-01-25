@@ -1,6 +1,6 @@
 {
   "name": "loki-mode",
-  "version": "5.1.1",
+  "version": "5.1.2",
   "description": "Multi-agent autonomous startup system for Claude Code, Codex CLI, and Gemini CLI",
   "keywords": [
     "claude",
@@ -22,8 +22,8 @@
   "license": "MIT",
   "author": "Lokesh",
   "bin": {
-    "loki": "./autonomy/loki",
-    "loki-mode": "./bin/loki-mode.js"
+    "loki": "autonomy/loki",
+    "loki-mode": "bin/loki-mode.js"
   },
   "files": [
     "SKILL.md",
