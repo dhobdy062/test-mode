@@ -135,16 +135,90 @@ Prompt: "Review the following claims for factual accuracy.
 
 ### Version Numbering
 Follows semantic versioning: MAJOR.MINOR.PATCH
-- Current: v5.0.0
+- Current: v5.1.2
 - MAJOR bump for architecture changes (v5.0.0 = multi-provider support)
-- MINOR bump for new features (v4.2.0 = foundational principles)
-- PATCH bump for fixes
+- MINOR bump for new features (v5.1.0 = dynamic tier selection)
+- PATCH bump for fixes (v5.1.2 = npm bin path fix)
 
 ### Code Style
 - **CRITICAL: NEVER use emojis** - Not in code, documentation, commit messages, README, or any output
 - **No emoji exceptions** - This includes website content, markdown files, and all text
+- If you see emojis anywhere in the codebase, remove them immediately
 - Clear, concise comments only when necessary
 - Follow existing patterns in codebase
+
+## Release Workflow
+
+When releasing a new version, follow these steps in order:
+
+### 1. Version Bump
+```bash
+# Bump version (updates package.json)
+npm version patch|minor|major --no-git-tag-version
+
+# Update VERSION file
+echo "X.Y.Z" > VERSION
+
+# Update SKILL.md header and footer version
+```
+
+### 2. Commit and Tag
+```bash
+git add -A
+git commit -m "release: vX.Y.Z - description"
+git push origin main
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+### 3. npm Publish
+```bash
+# Configure token (if needed)
+npm config set //registry.npmjs.org/:_authToken=TOKEN
+
+# Publish
+npm publish --access public
+
+# Verify
+npm view loki-mode version
+```
+
+### 4. Docker Hub
+```bash
+# Login (if needed)
+echo "TOKEN" | docker login -u asklokesh --password-stdin
+
+# Build and push
+docker build -t asklokesh/loki-mode:X.Y.Z -t asklokesh/loki-mode:latest .
+docker push asklokesh/loki-mode:X.Y.Z
+docker push asklokesh/loki-mode:latest
+```
+
+### 5. Homebrew Tap
+```bash
+# Update formula at asklokesh/homebrew-tap
+# Use gh api to update Formula/loki-mode.rb with new tag
+CURRENT_SHA=$(gh api repos/asklokesh/homebrew-tap/contents/Formula/loki-mode.rb --jq '.sha')
+CONTENT=$(base64 -i /path/to/formula.rb)
+gh api repos/asklokesh/homebrew-tap/contents/Formula/loki-mode.rb \
+  -X PUT \
+  -f message="Update to vX.Y.Z" \
+  -f content="$CONTENT" \
+  -f sha="$CURRENT_SHA"
+```
+
+### 6. Verify All
+```bash
+npm view loki-mode version           # Should show X.Y.Z
+docker pull asklokesh/loki-mode:X.Y.Z  # Should succeed
+brew update && brew info loki-mode   # Should show X.Y.Z (after tap update)
+```
+
+### Package Registry Credentials
+- **npm**: Token with 2FA bypass enabled
+- **Docker Hub**: Username `asklokesh` + access token
+- **GitHub**: PAT with repo scope for homebrew-tap updates
+- **Homebrew Tap**: https://github.com/asklokesh/homebrew-tap
 
 ## Testing
 
