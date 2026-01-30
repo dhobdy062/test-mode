@@ -410,6 +410,9 @@ RESOURCE_CHECK_INTERVAL=${LOKI_RESOURCE_CHECK_INTERVAL:-300}  # Check every 5 mi
 RESOURCE_CPU_THRESHOLD=${LOKI_RESOURCE_CPU_THRESHOLD:-80}     # CPU % threshold
 RESOURCE_MEM_THRESHOLD=${LOKI_RESOURCE_MEM_THRESHOLD:-80}     # Memory % threshold
 
+# Background Mode
+BACKGROUND_MODE=${LOKI_BACKGROUND:-false}                # Run in background
+
 # Security & Autonomy Controls
 STAGED_AUTONOMY=${LOKI_STAGED_AUTONOMY:-false}           # Require plan approval
 AUDIT_LOG_ENABLED=${LOKI_AUDIT_LOG:-false}               # Enable audit logging
@@ -2026,6 +2029,124 @@ write_dashboard_state() {
 EOF
 }
 
+#===============================================================================
+# Task Queue Auto-Tracking (for degraded mode providers)
+#===============================================================================
+
+# Track iteration start - create task in in-progress queue
+track_iteration_start() {
+    local iteration="$1"
+    local prd="${2:-}"
+    local task_id="iteration-$iteration"
+
+    mkdir -p .loki/queue
+
+    # Create task entry
+    local task_json=$(cat <<EOF
+{
+  "id": "$task_id",
+  "type": "iteration",
+  "title": "Iteration $iteration",
+  "description": "PRD: ${prd:-Codebase Analysis}",
+  "status": "in_progress",
+  "priority": "medium",
+  "startedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "provider": "${PROVIDER_NAME:-claude}"
+}
+EOF
+)
+
+    # Add to in-progress queue
+    local in_progress_file=".loki/queue/in-progress.json"
+    if [ -f "$in_progress_file" ]; then
+        local existing=$(cat "$in_progress_file")
+        if [ "$existing" = "[]" ] || [ -z "$existing" ]; then
+            echo "[$task_json]" > "$in_progress_file"
+        else
+            # Append to existing array
+            echo "$existing" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+data.append($task_json)
+print(json.dumps(data, indent=2))
+" > "$in_progress_file" 2>/dev/null || echo "[$task_json]" > "$in_progress_file"
+        fi
+    else
+        echo "[$task_json]" > "$in_progress_file"
+    fi
+
+    # Update current-task.json
+    echo "$task_json" > .loki/queue/current-task.json
+}
+
+# Track iteration completion - move task to completed queue
+track_iteration_complete() {
+    local iteration="$1"
+    local exit_code="${2:-0}"
+    local task_id="iteration-$iteration"
+
+    mkdir -p .loki/queue
+
+    # Get task from in-progress
+    local in_progress_file=".loki/queue/in-progress.json"
+    local completed_file=".loki/queue/completed.json"
+    local failed_file=".loki/queue/failed.json"
+
+    # Initialize files if needed
+    [ ! -f "$completed_file" ] && echo "[]" > "$completed_file"
+    [ ! -f "$failed_file" ] && echo "[]" > "$failed_file"
+
+    # Create completed task entry
+    local task_json=$(cat <<EOF
+{
+  "id": "$task_id",
+  "type": "iteration",
+  "title": "Iteration $iteration",
+  "status": "$([ "$exit_code" = "0" ] && echo "completed" || echo "failed")",
+  "completedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "exitCode": $exit_code,
+  "provider": "${PROVIDER_NAME:-claude}"
+}
+EOF
+)
+
+    # Add to appropriate queue
+    local target_file="$completed_file"
+    [ "$exit_code" != "0" ] && target_file="$failed_file"
+
+    python3 -c "
+import sys, json
+try:
+    with open('$target_file', 'r') as f:
+        data = json.load(f)
+except:
+    data = []
+data.append($task_json)
+# Keep only last 50 entries
+data = data[-50:]
+with open('$target_file', 'w') as f:
+    json.dump(data, f, indent=2)
+" 2>/dev/null || echo "[$task_json]" > "$target_file"
+
+    # Remove from in-progress
+    if [ -f "$in_progress_file" ]; then
+        python3 -c "
+import sys, json
+try:
+    with open('$in_progress_file', 'r') as f:
+        data = json.load(f)
+    data = [t for t in data if t.get('id') != '$task_id']
+    with open('$in_progress_file', 'w') as f:
+        json.dump(data, f, indent=2)
+except:
+    pass
+" 2>/dev/null || true
+    fi
+
+    # Clear current-task.json
+    echo "{}" > .loki/queue/current-task.json
+}
+
 start_status_monitor() {
     log_step "Starting status monitor..."
 
@@ -3424,6 +3545,9 @@ run_autonomous() {
             2) return 0 ;;  # STOP requested
         esac
 
+        # Auto-track iteration start (for dashboard task queue)
+        track_iteration_start "$ITERATION_COUNT" "$prd_path"
+
         local prompt=$(build_prompt $retry "$prd_path" $ITERATION_COUNT)
 
         echo ""
@@ -3731,6 +3855,9 @@ if __name__ == "__main__":
         log_info "${PROVIDER_DISPLAY_NAME:-Claude} exited with code $exit_code after ${duration}s"
         save_state $retry "exited" $exit_code
 
+        # Auto-track iteration completion (for dashboard task queue)
+        track_iteration_complete "$ITERATION_COUNT" "$exit_code"
+
         # Check for success - ONLY stop on explicit completion promise
         # There's never a "complete" product - always improvements, bugs, features
         if [ $exit_code -eq 0 ]; then
@@ -4012,6 +4139,10 @@ main() {
                 fi
                 shift
                 ;;
+            --bg|--background)
+                BACKGROUND_MODE=true
+                shift
+                ;;
             --help|-h)
                 echo "Usage: ./autonomy/run.sh [OPTIONS] [PRD_PATH]"
                 echo ""
@@ -4019,6 +4150,7 @@ main() {
                 echo "  --parallel           Enable git worktree-based parallel workflows"
                 echo "  --allow-haiku        Enable Haiku model for fast tier (default: disabled)"
                 echo "  --provider <name>    Provider: claude (default), codex, gemini"
+                echo "  --bg, --background   Run in background mode"
                 echo "  --help, -h           Show this help message"
                 echo ""
                 echo "Environment variables: See header comments in this script"
@@ -4049,6 +4181,53 @@ main() {
     if [ -n "$PRD_PATH" ] && [ ! -f "$PRD_PATH" ]; then
         log_error "PRD file not found: $PRD_PATH"
         exit 1
+    fi
+
+    # Handle background mode
+    if [ "$BACKGROUND_MODE" = "true" ]; then
+        # Initialize .loki directory first
+        mkdir -p .loki/logs
+
+        local log_file=".loki/logs/background-$(date +%Y%m%d-%H%M%S).log"
+        local pid_file=".loki/loki.pid"
+        local project_path=$(pwd)
+        local project_name=$(basename "$project_path")
+
+        echo ""
+        log_info "Starting Loki Mode in background..."
+
+        # Build command without --bg flag
+        local cmd_args=()
+        [ -n "$PRD_PATH" ] && cmd_args+=("$PRD_PATH")
+        [ "$PARALLEL_MODE" = "true" ] && cmd_args+=("--parallel")
+        [ -n "$LOKI_PROVIDER" ] && cmd_args+=("--provider" "$LOKI_PROVIDER")
+        [ "${LOKI_ALLOW_HAIKU:-}" = "true" ] && cmd_args+=("--allow-haiku")
+
+        # Run in background
+        nohup "${BASH_SOURCE[0]}" "${cmd_args[@]}" > "$log_file" 2>&1 &
+        local bg_pid=$!
+        echo "$bg_pid" > "$pid_file"
+
+        echo ""
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${GREEN}  Loki Mode Running in Background${NC}"
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        echo -e "  ${CYAN}Project:${NC}    $project_name"
+        echo -e "  ${CYAN}Path:${NC}       $project_path"
+        echo -e "  ${CYAN}PID:${NC}        $bg_pid"
+        echo -e "  ${CYAN}Log:${NC}        $log_file"
+        echo -e "  ${CYAN}Dashboard:${NC}  http://127.0.0.1:${DASHBOARD_PORT}/dashboard/index.html"
+        echo ""
+        echo -e "${YELLOW}Control Commands:${NC}"
+        echo -e "  ${DIM}Pause:${NC}      touch .loki/PAUSE"
+        echo -e "  ${DIM}Resume:${NC}     rm .loki/PAUSE"
+        echo -e "  ${DIM}Stop:${NC}       touch .loki/STOP  ${DIM}or${NC}  kill $bg_pid"
+        echo -e "  ${DIM}Logs:${NC}       tail -f $log_file"
+        echo -e "  ${DIM}Status:${NC}     cat .loki/STATUS.txt"
+        echo ""
+
+        exit 0
     fi
 
     # Show provider info
