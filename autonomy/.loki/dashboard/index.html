@@ -153,6 +153,33 @@
             font-weight: 400;
         }
 
+        /* Project Info */
+        .project-info {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .project-info .project-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .project-info .project-path {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
         /* Theme Toggle */
         .theme-toggle {
             display: flex;
@@ -1346,8 +1373,14 @@
                 <div class="logo-icon">L</div>
                 <div>
                     <div class="logo-text">Loki Mode</div>
-                    <div class="logo-version" id="version">v4.1.0</div>
+                    <div class="logo-version" id="version">v5.4.2</div>
                 </div>
+            </div>
+
+            <!-- Project Info (injected by run.sh) -->
+            <div class="project-info" id="project-info">
+                <div class="project-name" id="project-name">--</div>
+                <div class="project-path" id="project-path" title="">--</div>
             </div>
 
             <!-- Theme Toggle -->

@@ -1981,10 +1981,17 @@ write_dashboard_state() {
     fi
 
     # Write comprehensive JSON state
+    local project_name=$(basename "$(pwd)")
+    local project_path=$(pwd)
+
     cat > "$output_file" << EOF
 {
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "version": "$version",
+  "project": {
+    "name": "$project_name",
+    "path": "$project_path"
+  },
   "mode": "$mode",
   "phase": "$current_phase",
   "complexity": "$complexity",
@@ -2057,9 +2064,17 @@ stop_status_monitor() {
 generate_dashboard() {
     # Copy dashboard from skill installation (v4.0.0 with Anthropic design language)
     local skill_dashboard="$SCRIPT_DIR/.loki/dashboard/index.html"
+    local project_name=$(basename "$(pwd)")
+    local project_path=$(pwd)
+
     if [ -f "$skill_dashboard" ]; then
-        cp "$skill_dashboard" .loki/dashboard/index.html
+        # Copy and inject project info
+        sed -e "s|Loki Mode</title>|Loki Mode - $project_name</title>|g" \
+            -e "s|<div class=\"project-name\" id=\"project-name\">--|<div class=\"project-name\" id=\"project-name\">$project_name|g" \
+            -e "s|<div class=\"project-path\" id=\"project-path\" title=\"\">--|<div class=\"project-path\" id=\"project-path\" title=\"$project_path\">$project_path|g" \
+            "$skill_dashboard" > .loki/dashboard/index.html
         log_info "Dashboard copied from skill installation"
+        log_info "Project: $project_name ($project_path)"
         return
     fi
 
@@ -2853,11 +2868,36 @@ start_dashboard() {
     # Generate HTML
     generate_dashboard
 
-    # Kill any existing process on the dashboard port
-    if lsof -i :$DASHBOARD_PORT &>/dev/null; then
-        log_step "Killing existing process on port $DASHBOARD_PORT..."
-        lsof -ti :$DASHBOARD_PORT | xargs kill -9 2>/dev/null || true
-        sleep 1
+    # Find available port - don't kill other loki instances
+    local original_port=$DASHBOARD_PORT
+    local max_attempts=10
+    local attempt=0
+
+    while lsof -i :$DASHBOARD_PORT &>/dev/null && [ $attempt -lt $max_attempts ]; do
+        # Check if it's our own dashboard (same project)
+        local existing_pid=$(lsof -ti :$DASHBOARD_PORT 2>/dev/null | head -1)
+        local existing_cwd=""
+        if [ -n "$existing_pid" ]; then
+            existing_cwd=$(lsof -p "$existing_pid" 2>/dev/null | grep cwd | awk '{print $NF}')
+        fi
+
+        if [ "$existing_cwd" = "$(pwd)/.loki" ]; then
+            # Same project - kill and reuse port
+            log_step "Killing existing dashboard for this project on port $DASHBOARD_PORT..."
+            lsof -ti :$DASHBOARD_PORT | xargs kill -9 2>/dev/null || true
+            sleep 1
+            break
+        else
+            # Different project - find new port
+            ((DASHBOARD_PORT++))
+            ((attempt++))
+            log_info "Port $((DASHBOARD_PORT-1)) in use by another instance, trying $DASHBOARD_PORT..."
+        fi
+    done
+
+    if [ $attempt -ge $max_attempts ]; then
+        log_error "Could not find available port after $max_attempts attempts"
+        return 1
     fi
 
     # Start Python HTTP server from .loki/ root so it can serve queue/ and state/
@@ -3396,6 +3436,20 @@ run_autonomous() {
         # Run AI provider with live output
         local start_time=$(date +%s)
         local log_file=".loki/logs/autonomy-$(date +%Y%m%d).log"
+        local agent_log=".loki/logs/agent.log"
+
+        # Ensure agent.log exists for dashboard real-time view
+        # (Dashboard reads this file for terminal output)
+        # Keep history but limit size to ~1MB to prevent memory issues
+        if [ -f "$agent_log" ] && [ "$(stat -f%z "$agent_log" 2>/dev/null || stat -c%s "$agent_log" 2>/dev/null)" -gt 1000000 ]; then
+            # Trim to last 500KB
+            tail -c 500000 "$agent_log" > "$agent_log.tmp" && mv "$agent_log.tmp" "$agent_log"
+        fi
+        touch "$agent_log"
+        echo "" >> "$agent_log"
+        echo "════════════════════════════════════════════════════════════════" >> "$agent_log"
+        echo "  NEW SESSION - $(date)" >> "$agent_log"
+        echo "════════════════════════════════════════════════════════════════" >> "$agent_log"
 
         echo ""
         echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -3406,16 +3460,16 @@ run_autonomous() {
         echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo ""
 
-        # Log start time
-        echo "=== Session started at $(date) ===" >> "$log_file"
-        echo "=== Provider: ${PROVIDER_NAME:-claude} ===" >> "$log_file"
-        echo "=== Prompt: $prompt ===" >> "$log_file"
+        # Log start time (to both archival and dashboard logs)
+        echo "=== Session started at $(date) ===" | tee -a "$log_file" "$agent_log"
+        echo "=== Provider: ${PROVIDER_NAME:-claude} ===" | tee -a "$log_file" "$agent_log"
+        echo "=== Prompt (truncated): ${prompt:0:200}... ===" | tee -a "$log_file" "$agent_log"
 
         # Dynamic tier selection based on RARV cycle phase
         CURRENT_TIER=$(get_rarv_tier "$ITERATION_COUNT")
         local rarv_phase=$(get_rarv_phase_name "$ITERATION_COUNT")
         local tier_param=$(get_provider_tier_param "$CURRENT_TIER")
-        echo "=== RARV Phase: $rarv_phase, Tier: $CURRENT_TIER ($tier_param) ===" >> "$log_file"
+        echo "=== RARV Phase: $rarv_phase, Tier: $CURRENT_TIER ($tier_param) ===" | tee -a "$log_file" "$agent_log"
         log_info "RARV Phase: $rarv_phase -> Tier: $CURRENT_TIER ($tier_param)"
 
         set +e
@@ -3428,7 +3482,7 @@ run_autonomous() {
                 LOKI_CURRENT_MODEL="$tier_param" \
                 claude --dangerously-skip-permissions --model "$tier_param" -p "$prompt" \
             --output-format stream-json --verbose 2>&1 | \
-            tee -a "$log_file" | \
+            tee -a "$log_file" "$agent_log" | \
             python3 -u -c '
 import sys
 import json
@@ -3643,7 +3697,7 @@ if __name__ == "__main__":
                 # Uses dynamic tier from RARV phase (tier_param already set above)
                 CODEX_MODEL_REASONING_EFFORT="$tier_param" \
                 codex exec --dangerously-bypass-approvals-and-sandbox \
-                    "$prompt" 2>&1 | tee -a "$log_file"
+                    "$prompt" 2>&1 | tee -a "$log_file" "$agent_log"
                 local exit_code=${PIPESTATUS[0]}
                 ;;
 
@@ -3651,8 +3705,9 @@ if __name__ == "__main__":
                 # Gemini: Degraded mode - no stream-json, no agent tracking
                 # Using --model flag to specify model
                 echo "[loki] Gemini model: ${PROVIDER_MODEL:-gemini-3-pro-preview}, tier: $tier_param" >> "$log_file"
+                echo "[loki] Gemini model: ${PROVIDER_MODEL:-gemini-3-pro-preview}, tier: $tier_param" >> "$agent_log"
                 gemini --yolo --model "${PROVIDER_MODEL:-gemini-3-pro-preview}" \
-                    "$prompt" 2>&1 | tee -a "$log_file"
+                    "$prompt" 2>&1 | tee -a "$log_file" "$agent_log"
                 local exit_code=${PIPESTATUS[0]}
                 ;;
 
