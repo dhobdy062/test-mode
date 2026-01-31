@@ -185,6 +185,54 @@ jobs:
             asklokesh/loki-mode:${{ needs.release.outputs.version }}
             asklokesh/loki-mode:latest
 
+  publish-vscode:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sync version from VERSION file
+        working-directory: vscode-extension
+        run: |
+          VERSION=$(cat ../VERSION | tr -d '\n')
+          echo "Syncing version to $VERSION"
+          npm pkg set version="$VERSION"
+
+      - name: Install dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Compile
+        working-directory: vscode-extension
+        run: npm run compile
+
+      - name: Package extension
+        working-directory: vscode-extension
+        run: |
+          npx vsce package
+          echo "VSIX_FILE=$(ls *.vsix)" >> $GITHUB_ENV
+
+      - name: Upload VSIX to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ needs.release.outputs.version }}" \
+            "vscode-extension/${{ env.VSIX_FILE }}" \
+            --clobber
+
+      - name: Publish to VS Code Marketplace
+        working-directory: vscode-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx vsce publish -p "$VSCE_PAT"
+
   update-homebrew:
     needs: [release, publish-npm, publish-docker]
     if: needs.release.outputs.release_created == 'true'

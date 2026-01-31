@@ -1,0 +1,249 @@
+{
+  "name": "loki-mode",
+  "displayName": "Loki Mode",
+  "description": "Multi-agent autonomous development system for Claude Code, OpenAI Codex CLI, and Google Gemini CLI",
+  "version": "0.1.0",
+  "publisher": "asklokesh",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asklokesh/loki-mode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "ai",
+    "claude",
+    "codex",
+    "gemini",
+    "autonomous",
+    "agent"
+  ],
+  "icon": "media/icons/loki-icon.png",
+  "activationEvents": [
+    "workspaceContains:.loki",
+    "onCommand:loki.start"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "loki.start",
+        "title": "Start Loki Mode",
+        "category": "Loki",
+        "icon": "$(play)"
+      },
+      {
+        "command": "loki.stop",
+        "title": "Stop Loki Mode",
+        "category": "Loki",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "loki.pause",
+        "title": "Pause Loki Mode",
+        "category": "Loki",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "loki.resume",
+        "title": "Resume Loki Mode",
+        "category": "Loki",
+        "icon": "$(debug-continue)"
+      },
+      {
+        "command": "loki.status",
+        "title": "Show Loki Status",
+        "category": "Loki",
+        "icon": "$(info)"
+      },
+      {
+        "command": "loki.injectInput",
+        "title": "Inject Input to Loki",
+        "category": "Loki",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "loki.refreshSessions",
+        "title": "Refresh Sessions",
+        "category": "Loki",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "loki.refreshTasks",
+        "title": "Refresh Tasks",
+        "category": "Loki",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "loki.showQuickPick",
+        "title": "Show Quick Actions",
+        "category": "Loki"
+      },
+      {
+        "command": "loki.openPrd",
+        "title": "Open PRD File",
+        "category": "Loki"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "loki-mode",
+          "title": "Loki Mode",
+          "icon": "media/icons/loki-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "loki-mode": [
+        {
+          "id": "loki-sessions",
+          "name": "Sessions",
+          "contextualTitle": "Loki Sessions"
+        },
+        {
+          "id": "loki-tasks",
+          "name": "Tasks",
+          "contextualTitle": "Loki Tasks"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "loki-sessions",
+        "contents": "No active Loki sessions.\n[Start Loki Mode](command:loki.start)"
+      },
+      {
+        "view": "loki-tasks",
+        "contents": "No tasks available.\nStart a Loki session to see tasks."
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "loki.refreshSessions",
+          "when": "view == loki-sessions",
+          "group": "navigation"
+        },
+        {
+          "command": "loki.refreshTasks",
+          "when": "view == loki-tasks",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "loki.start",
+          "when": "true"
+        },
+        {
+          "command": "loki.stop",
+          "when": "loki.isRunning"
+        },
+        {
+          "command": "loki.pause",
+          "when": "loki.isRunning && !loki.isPaused"
+        },
+        {
+          "command": "loki.resume",
+          "when": "loki.isPaused"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "workbench.view.extension.loki-mode",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l"
+      }
+    ],
+    "configuration": {
+      "title": "Loki Mode",
+      "properties": {
+        "loki.provider": {
+          "type": "string",
+          "default": "claude",
+          "enum": [
+            "claude",
+            "codex",
+            "gemini"
+          ],
+          "enumDescriptions": [
+            "Claude Code - Full features (subagents, parallel, Task tool, MCP)",
+            "OpenAI Codex CLI - Degraded mode (sequential only)",
+            "Google Gemini CLI - Degraded mode (sequential only)"
+          ],
+          "description": "AI provider to use for Loki Mode"
+        },
+        "loki.apiPort": {
+          "type": "number",
+          "default": 9898,
+          "description": "Port for the Loki Mode API server"
+        },
+        "loki.apiHost": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Host for the Loki Mode API server"
+        },
+        "loki.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically connect to Loki API when workspace has .loki directory"
+        },
+        "loki.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Loki Mode status in the status bar"
+        },
+        "loki.logLevel": {
+          "type": "string",
+          "default": "info",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "description": "Log level for Loki Mode output"
+        },
+        "loki.pollingInterval": {
+          "type": "number",
+          "default": 2000,
+          "description": "Interval in milliseconds for polling API status"
+        },
+        "loki.prdPath": {
+          "type": "string",
+          "default": "",
+          "description": "Default path to PRD file for starting Loki Mode"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.19.8",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.2"
+  }
+}
