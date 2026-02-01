@@ -103,6 +103,14 @@ AWS Bedrock's multi-agent collaboration patterns inform Loki Mode's routing and 
 | Paper | Authors/Source | Contribution |
 |-------|----------------|--------------|
 | [MemEvolve: Meta-Evolution of Agent Memory Systems](https://arxiv.org/abs/2512.18746) | Zhang et al., OPPO AI Agent Team, 2025 | Modular design (Encode/Store/Retrieve/Manage), task-aware strategy selection, 17.06% improvement via meta-evolution |
+| [A-MEM: Agentic Memory for LLM Agents](https://arxiv.org/abs/2502.12110) | Xu et al., NeurIPS 2025 | Zettelkasten-style atomic notes with keywords, tags, and bidirectional links; ChromaDB indexing |
+| [MemGPT: Towards LLMs as Operating Systems](https://arxiv.org/abs/2310.08560) | Packer et al., 2023 | OS-inspired hierarchical memory (Core/Recall/Archival), self-editing memory via tool use, paging policies |
+| [Zep: Temporal Knowledge Graph Architecture](https://arxiv.org/abs/2501.13956) | Zep AI, 2025 | Bi-temporal model (event time + ingestion time), knowledge invalidation, 94.8% DMR accuracy |
+| [SimpleMem: Efficient Lifelong Memory](https://arxiv.org/abs/2601.02553) | aiming-lab, 2026 | Semantic lossless compression, online semantic synthesis, 30x token reduction, 26.4% F1 improvement |
+| [CAM: Constructivist Agentic Memory](https://arxiv.org/abs/2510.05520) | Rui et al., NeurIPS 2025 | Piaget-inspired hierarchical schemata, overlapping clustering, prune-and-grow retrieval |
+| [SAGE: Self-evolving Agents with Reflective Memory](https://arxiv.org/abs/2409.00872) | 2024 | Ebbinghaus forgetting curve, usage-based decay, three-agent collaboration for memory refinement |
+| [Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval) | Anthropic, 2024 | Contextual BM25 + embeddings + reranking, 67% retrieval failure reduction |
+| [Memory in the Age of AI Agents (Survey)](https://arxiv.org/abs/2512.13564) | Liu et al., 2025 | Forms-Functions-Dynamics taxonomy, comprehensive memory architecture survey |
 
 ---
 
@@ -285,6 +293,45 @@ The following open-source projects have pioneered patterns that influence or com
 
 ---
 
+## v5.9.0 Additions
+
+### Cross-Project Learning Memory System
+
+The Cross-Project Learning feature (v5.9.0) incorporates research from the following sources:
+
+| Resource | Contribution |
+|----------|--------------|
+| [A-MEM](https://arxiv.org/abs/2502.12110) | Zettelkasten atomic note pattern - each learning is self-contained with keywords and tags |
+| [MemGPT](https://arxiv.org/abs/2310.08560) | Tiered memory architecture (hot/warm/cold) for efficient retrieval |
+| [Zep](https://arxiv.org/abs/2501.13956) | Temporal validity tracking (valid_from, valid_until, superseded_by) |
+| [SimpleMem](https://arxiv.org/abs/2601.02553) | MD5 hash-based deduplication at write time |
+| [SAGE](https://arxiv.org/abs/2409.00872) | Usage tracking with access counts and decay |
+| [Anthropic Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval) | Contextual prefixes for improved retrieval |
+| [Agent Memory Paper List](https://github.com/Shichun-Liu/Agent-Memory-Paper-List) | Comprehensive survey of memory architectures |
+
+### Key Patterns Incorporated (v5.9.0)
+
+| Pattern | Source | Implementation |
+|---------|--------|----------------|
+| JSONL Append-Only Storage | SimpleMem | `~/.loki/learnings/*.jsonl` for efficient writes |
+| MD5 Hash Deduplication | SimpleMem | Prevent duplicate entries at write time |
+| Keyword/Tag Extraction | A-MEM | Auto-generated tags for filtering (planned v5.10) |
+| Usage Tracking | SAGE | Access counts and timestamps (planned v5.10) |
+| Temporal Validity | Zep | Track when learnings become outdated (planned v5.11) |
+| Cross-Learning Links | A-MEM | Bidirectional knowledge graph (planned v6.0) |
+| Memory Consolidation | MemGPT | Periodic deduplication and abstraction (planned v6.0) |
+
+### Implementation Roadmap
+
+Based on research synthesis, the following improvements are planned:
+
+**Phase 1 (v5.10.x):** Deduplication improvements, usage tracking, keyword extraction
+**Phase 2 (v5.11.x):** BM25 search, contextual prefixes, temporal validity
+**Phase 3 (v6.0.x):** Zettelkasten-style links, memory tiering
+**Phase 4 (v7.0.x):** Hierarchical abstraction, consolidation pipeline
+
+---
+
 ## License
 
 This acknowledgements file documents the research and resources that influenced Loki Mode's design. All referenced works retain their original licenses and copyrights.
@@ -293,4 +340,4 @@ Loki Mode itself is released under the MIT License.
 
 ---
 
-*Last updated: v5.1.3*
+*Last updated: v5.9.0*

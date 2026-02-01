@@ -237,14 +237,6 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx vsce publish -p "$VSCE_PAT"
 
-      - name: Upload VSIX to GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "v${{ needs.release.outputs.version }}" \
-            "vscode-extension/${{ env.VSIX_FILE }}" \
-            --clobber
-
   update-homebrew:
     needs: [release, publish-npm, publish-docker]
     if: needs.release.outputs.release_created == 'true'

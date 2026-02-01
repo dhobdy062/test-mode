@@ -1243,7 +1243,27 @@ cmd_memory() {
             ;;
 
         show)
+            # Parse arguments: show <type> [--limit N] [--project P]
             local type="${2:-all}"
+            local limit=20
+            local project=""
+            shift 2 2>/dev/null || true
+
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --limit|-l)
+                        limit="${2:-20}"
+                        shift 2
+                        ;;
+                    --project|-p)
+                        project="${2:-}"
+                        shift 2
+                        ;;
+                    *)
+                        shift
+                        ;;
+                esac
+            done
 
             case "$type" in
                 patterns|pattern)
@@ -1252,14 +1272,26 @@ cmd_memory() {
                     if [ -f "$learnings_dir/patterns.jsonl" ]; then
                         python3 -c "
 import json
+limit = $limit
+project_filter = '$project'
+count = 0
 with open('$learnings_dir/patterns.jsonl', 'r') as f:
     for line in f:
+        if count >= limit:
+            break
         try:
             e = json.loads(line)
             if 'description' in e:
+                if project_filter and e.get('project', '') != project_filter:
+                    continue
                 print(f\"[{e.get('project', 'unknown')}] {e['description'][:100]}\")
+                count += 1
         except: pass
-" 2>/dev/null || echo "No patterns found"
+if count == 0:
+    print('(empty - no patterns recorded)')
+" 2>/dev/null
+                    else
+                        echo "(empty - no patterns recorded)"
                     fi
                     ;;
 
@@ -1269,14 +1301,26 @@ with open('$learnings_dir/patterns.jsonl', 'r') as f:
                     if [ -f "$learnings_dir/mistakes.jsonl" ]; then
                         python3 -c "
 import json
+limit = $limit
+project_filter = '$project'
+count = 0
 with open('$learnings_dir/mistakes.jsonl', 'r') as f:
     for line in f:
+        if count >= limit:
+            break
         try:
             e = json.loads(line)
             if 'description' in e:
+                if project_filter and e.get('project', '') != project_filter:
+                    continue
                 print(f\"[{e.get('project', 'unknown')}] {e['description'][:100]}\")
+                count += 1
         except: pass
-" 2>/dev/null | tail -20 || echo "No mistakes found"
+if count == 0:
+    print('(empty - no mistakes recorded)')
+" 2>/dev/null
+                    else
+                        echo "(empty - no mistakes recorded)"
                     fi
                     ;;
 
@@ -1286,29 +1330,47 @@ with open('$learnings_dir/mistakes.jsonl', 'r') as f:
                     if [ -f "$learnings_dir/successes.jsonl" ]; then
                         python3 -c "
 import json
+limit = $limit
+project_filter = '$project'
+count = 0
 with open('$learnings_dir/successes.jsonl', 'r') as f:
     for line in f:
+        if count >= limit:
+            break
         try:
             e = json.loads(line)
             if 'description' in e:
+                if project_filter and e.get('project', '') != project_filter:
+                    continue
                 print(f\"[{e.get('project', 'unknown')}] {e['description'][:100]}\")
+                count += 1
         except: pass
-" 2>/dev/null | tail -20 || echo "No successes found"
+if count == 0:
+    print('(empty - no successes recorded)')
+" 2>/dev/null
+                    else
+                        echo "(empty - no successes recorded)"
                     fi
                     ;;
 
-                all|*)
-                    cmd_memory show patterns
+                all)
+                    cmd_memory show patterns --limit "$limit"
                     echo ""
-                    cmd_memory show mistakes
+                    cmd_memory show mistakes --limit "$limit"
                     echo ""
-                    cmd_memory show successes
+                    cmd_memory show successes --limit "$limit"
+                    ;;
+
+                *)
+                    echo -e "${RED}Unknown type: $type${NC}"
+                    echo "Valid types: patterns, mistakes, successes, all"
+                    exit 1
                     ;;
             esac
             ;;
 
         search)
-            local query="$2"
+            local query="${2:-}"
             if [ -z "$query" ]; then
                 echo -e "${RED}Usage: loki memory search <query>${NC}"
                 exit 1
