@@ -477,14 +477,22 @@ class ProcessManager {
   }
 
   getStatus() {
+    // If no process is running, show 'idle' instead of stale status
+    // This prevents showing 'failed' when the session has ended
+    const isActive = !!this.process;
+    const effectiveStatus = isActive ? this.status :
+      (this.status === 'completed' || this.status === 'failed') ? 'idle' : this.status;
+
     return {
-      status: this.status,
+      status: effectiveStatus,
       pid: this.process?.pid || null,
       provider: this.provider,
       prd: this.prdPath,
       startedAt: this.startedAt,
       uptime: this.startedAt ? Date.now() - new Date(this.startedAt).getTime() : 0,
-      dashboard: this.lastDashboardState
+      dashboard: this.lastDashboardState,
+      // Include last session result for debugging
+      lastSessionResult: isActive ? null : this.status
     };
   }
 }
