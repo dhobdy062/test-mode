@@ -5,6 +5,24 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.8.7] - 2026-02-01
+
+### Fixed - Session retry persistence bug
+
+**Bug fix: New sessions were failing immediately due to persisted retry count.**
+
+#### Bug Fixes
+- **Retry count reset**: New sessions now automatically reset retry count when previous session ended in failure (status: failed, max_retries_exceeded, max_iterations_reached)
+- **New `loki reset` command**: Added command to manually reset session state
+  - `loki reset` - Reset all state (autonomy + failed queue)
+  - `loki reset retries` - Reset only retry counter
+  - `loki reset failed` - Clear failed task queue
+
+#### Root Cause
+The `autonomy-state.json` persisted `retryCount: 50` from a failed session. New sessions would load this and immediately exit with "Max retries exceeded" without doing any work.
+
+---
+
 ## [5.8.6] - 2026-02-01
 
 ### Fixed - Critical: run.sh deletion bug

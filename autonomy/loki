@@ -1124,6 +1124,9 @@ main() {
         provider)
             cmd_provider "$@"
             ;;
+        reset)
+            cmd_reset "$@"
+            ;;
         version|--version|-v)
             cmd_version
             ;;
@@ -1133,6 +1136,75 @@ main() {
         *)
             echo -e "${RED}Unknown command: $command${NC}"
             echo "Run 'loki help' for usage."
+            exit 1
+            ;;
+    esac
+}
+
+# Reset session state
+cmd_reset() {
+    local subcommand="${1:-all}"
+
+    case "$subcommand" in
+        retries|retry)
+            if [ -f "$LOKI_DIR/autonomy-state.json" ]; then
+                # Reset only retry count
+                if command -v python3 &> /dev/null; then
+                    python3 -c "
+import json
+with open('$LOKI_DIR/autonomy-state.json', 'r') as f:
+    state = json.load(f)
+state['retryCount'] = 0
+state['status'] = 'reset'
+with open('$LOKI_DIR/autonomy-state.json', 'w') as f:
+    json.dump(state, f, indent=4)
+" 2>/dev/null
+                    echo -e "${GREEN}Retry count reset to 0${NC}"
+                else
+                    rm -f "$LOKI_DIR/autonomy-state.json"
+                    echo -e "${GREEN}Autonomy state cleared${NC}"
+                fi
+            else
+                echo -e "${YELLOW}No autonomy state found${NC}"
+            fi
+            ;;
+        failed|failures)
+            if [ -f "$LOKI_DIR/queue/failed.json" ]; then
+                local count
+                count=$(jq 'length' "$LOKI_DIR/queue/failed.json" 2>/dev/null || echo "?")
+                rm -f "$LOKI_DIR/queue/failed.json"
+                echo "[]" > "$LOKI_DIR/queue/failed.json"
+                echo -e "${GREEN}Cleared $count failed tasks${NC}"
+            else
+                echo -e "${YELLOW}No failed tasks found${NC}"
+            fi
+            ;;
+        all)
+            # Reset everything
+            rm -f "$LOKI_DIR/autonomy-state.json"
+            echo "[]" > "$LOKI_DIR/queue/failed.json" 2>/dev/null
+            echo -e "${GREEN}Session state reset${NC}"
+            echo "  - Autonomy state cleared"
+            echo "  - Failed task queue cleared"
+            ;;
+        --help|-h|help)
+            echo -e "${BOLD}loki reset${NC} - Reset session state"
+            echo ""
+            echo "Usage: loki reset [target]"
+            echo ""
+            echo "Targets:"
+            echo "  all       Reset everything (default)"
+            echo "  retries   Reset only the retry counter"
+            echo "  failed    Clear failed task queue"
+            echo ""
+            echo "Examples:"
+            echo "  loki reset              # Reset all state"
+            echo "  loki reset retries      # Just reset retry count"
+            echo "  loki reset failed       # Clear failed tasks"
+            ;;
+        *)
+            echo -e "${RED}Unknown reset target: $subcommand${NC}"
+            echo "Valid targets: all, retries, failed"
             exit 1
             ;;
     esac

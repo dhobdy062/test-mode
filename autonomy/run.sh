@@ -3494,7 +3494,19 @@ EOF
 load_state() {
     if [ -f ".loki/autonomy-state.json" ]; then
         if command -v python3 &> /dev/null; then
+            # Load both retry count and status from previous session
+            local prev_status
+            prev_status=$(python3 -c "import json; print(json.load(open('.loki/autonomy-state.json')).get('status', 'unknown'))" 2>/dev/null || echo "unknown")
             RETRY_COUNT=$(python3 -c "import json; print(json.load(open('.loki/autonomy-state.json')).get('retryCount', 0))" 2>/dev/null || echo "0")
+
+            # Reset retry count if previous session ended in a terminal state
+            # This allows new sessions to start fresh after failures
+            case "$prev_status" in
+                failed|max_iterations_reached|max_retries_exceeded)
+                    log_info "Previous session ended with status: $prev_status. Resetting retry count."
+                    RETRY_COUNT=0
+                    ;;
+            esac
         else
             RETRY_COUNT=0
         fi
