@@ -1,5 +1,10 @@
 import React from 'react';
 import { Plus, MoreHorizontal } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { Task, TaskStatus, COLUMN_CONFIG } from './types';
 import { TaskCard } from './TaskCard';
 
@@ -8,10 +13,7 @@ interface KanbanColumnProps {
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onAddTask: (status: TaskStatus) => void;
-  onDragStart: (e: React.DragEvent, taskId: string) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, status: TaskStatus) => void;
-  isDragOver: boolean;
+  onMoveTask?: (taskId: string, direction: 'left' | 'right') => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -19,11 +21,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   tasks,
   onTaskClick,
   onAddTask,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  isDragOver,
+  onMoveTask,
 }) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: status,
+    data: { status },
+  });
+
   const config = COLUMN_CONFIG[status];
 
   const getStatusDot = () => {
@@ -45,11 +49,12 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
   return (
     <div
+      ref={setNodeRef}
       className={`flex flex-col min-w-[300px] max-w-[300px] rounded-xl ${config.color} transition-all duration-200 ${
-        isDragOver ? 'ring-2 ring-anthropic-orange ring-offset-2 dark:ring-offset-anthropic-charcoal' : ''
+        isOver ? 'ring-2 ring-anthropic-orange ring-offset-2 dark:ring-offset-anthropic-charcoal' : ''
       }`}
-      onDragOver={onDragOver}
-      onDrop={(e) => onDrop(e, status)}
+      role="region"
+      aria-label={`${config.title} column with ${tasks.length} tasks`}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50">
@@ -66,13 +71,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           <button
             onClick={() => onAddTask(status)}
             className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-anthropic-charcoal text-gray-500 hover:text-anthropic-orange transition-colors"
-            title="Add task"
+            aria-label={`Add task to ${config.title}`}
           >
             <Plus className="w-4 h-4" />
           </button>
           <button
             className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-anthropic-charcoal text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            title="Column options"
+            aria-label={`${config.title} column options`}
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
@@ -80,7 +85,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       </div>
 
       {/* Task List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[200px]">
+      <div
+        className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[200px]"
+        role="list"
+        aria-label={`Tasks in ${config.title}`}
+      >
         {tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="w-12 h-12 rounded-full bg-white dark:bg-anthropic-charcoal flex items-center justify-center mb-3">
@@ -97,14 +106,19 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             </button>
           </div>
         ) : (
-          tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClick={onTaskClick}
-              onDragStart={onDragStart}
-            />
-          ))
+          <SortableContext
+            items={tasks.map((t) => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClick={onTaskClick}
+                onMoveTask={onMoveTask}
+              />
+            ))}
+          </SortableContext>
         )}
       </div>
 

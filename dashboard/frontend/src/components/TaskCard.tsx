@@ -1,14 +1,35 @@
 import React from 'react';
-import { Clock, User, Tag, MoreVertical } from 'lucide-react';
-import { Task, PRIORITY_CONFIG, TYPE_CONFIG } from './types';
+import { Clock, User, Tag, MoreVertical, GripVertical } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Task, TaskStatus, PRIORITY_CONFIG, TYPE_CONFIG } from './types';
 
 interface TaskCardProps {
   task: Task;
   onClick: (task: Task) => void;
-  onDragStart: (e: React.DragEvent, taskId: string) => void;
+  onMoveTask?: (taskId: string, direction: 'left' | 'right') => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onDragStart }) => {
+const COLUMN_ORDER: TaskStatus[] = ['backlog', 'pending', 'in_progress', 'review', 'done'];
+
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onMoveTask }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: task.id,
+    data: { task },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   const priorityConfig = PRIORITY_CONFIG[task.priority];
   const typeConfig = TYPE_CONFIG[task.type];
 
@@ -17,16 +38,58 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onDragStart }
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Enter or Space to open task details
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick(task);
+      return;
+    }
+
+    // Shift + Arrow keys to move task between columns
+    if (e.shiftKey && onMoveTask) {
+      const currentIndex = COLUMN_ORDER.indexOf(task.status);
+
+      if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        e.preventDefault();
+        onMoveTask(task.id, 'left');
+      } else if (e.key === 'ArrowRight' && currentIndex < COLUMN_ORDER.length - 1) {
+        e.preventDefault();
+        onMoveTask(task.id, 'right');
+      }
+    }
+  };
+
+  const currentColumnIndex = COLUMN_ORDER.indexOf(task.status);
+  const canMoveLeft = currentColumnIndex > 0;
+  const canMoveRight = currentColumnIndex < COLUMN_ORDER.length - 1;
+
   return (
     <div
-      draggable
-      onDragStart={(e) => onDragStart(e, task.id)}
+      ref={setNodeRef}
+      style={style}
+      className={`group bg-white dark:bg-anthropic-charcoal-light rounded-lg border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:border-anthropic-orange dark:hover:border-anthropic-orange hover:shadow-md transition-all duration-200 select-none ${
+        isDragging ? 'opacity-50 shadow-lg ring-2 ring-anthropic-orange' : ''
+      }`}
       onClick={() => onClick(task)}
-      className="group bg-white dark:bg-anthropic-charcoal-light rounded-lg border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:border-anthropic-orange dark:hover:border-anthropic-orange hover:shadow-md transition-all duration-200 select-none"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label={`Task: ${task.title}. Priority: ${task.priority}. Status: ${task.status}. Press Enter to open details. ${canMoveLeft ? 'Shift+Left to move back. ' : ''}${canMoveRight ? 'Shift+Right to move forward.' : ''}`}
     >
       {/* Header with badges */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex flex-wrap gap-1.5">
+          {/* Drag handle */}
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-1 -ml-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-grab active:cursor-grabbing touch-none"
+            aria-label="Drag to reorder task"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-gray-400" />
+          </button>
           {/* Type badge */}
           <span
             className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${typeConfig.bgColor} ${typeConfig.color}`}
@@ -46,6 +109,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onDragStart }
             // Menu handler could be added here
           }}
           className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-opacity"
+          aria-label="Task options menu"
         >
           <MoreVertical className="w-4 h-4 text-gray-400" />
         </button>

@@ -27,12 +27,12 @@ class Base(DeclarativeBase):
 
 
 class TaskStatus(str, PyEnum):
-    """Task status enumeration."""
+    """Task status enumeration for 5-column Kanban board."""
+    BACKLOG = "backlog"
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    BLOCKED = "blocked"
+    REVIEW = "review"
+    DONE = "done"
 
 
 class TaskPriority(str, PyEnum):

@@ -1,106 +1,153 @@
-import React, { useState } from 'react';
-import { Plus, Search, Filter, RefreshCw, Settings } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Search, Filter, RefreshCw, Settings, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Task, TaskStatus, COLUMN_CONFIG } from './types';
 import { KanbanColumn } from './KanbanColumn';
+import { TaskCard } from './TaskCard';
 import { TaskModal } from './TaskModal';
+import { tasksApi, projectsApi, wsClient, ApiError } from '../api';
 
-// Sample data for demonstration
-const SAMPLE_TASKS: Task[] = [
-  {
-    id: '1',
-    title: 'Set up project infrastructure',
-    description: 'Initialize the monorepo with Turborepo, configure ESLint, Prettier, and TypeScript across all packages.',
-    status: 'done',
-    priority: 'high',
-    type: 'chore',
-    assignee: 'Claude',
-    createdAt: '2025-01-20T10:00:00Z',
-    updatedAt: '2025-01-21T14:30:00Z',
-    tags: ['infrastructure', 'setup'],
-    estimatedHours: 4,
-  },
-  {
-    id: '2',
-    title: 'Implement user authentication',
-    description: 'Add JWT-based authentication with refresh tokens. Include login, logout, and password reset flows.',
-    status: 'in_progress',
-    priority: 'critical',
-    type: 'feature',
-    assignee: 'Claude',
-    createdAt: '2025-01-21T09:00:00Z',
-    updatedAt: '2025-01-22T16:00:00Z',
-    tags: ['auth', 'security', 'backend'],
-    estimatedHours: 8,
-  },
-  {
-    id: '3',
-    title: 'Design system components',
-    description: 'Create reusable UI components: Button, Input, Card, Modal, and Toast notification system.',
-    status: 'review',
-    priority: 'high',
-    type: 'feature',
-    createdAt: '2025-01-19T11:00:00Z',
-    updatedAt: '2025-01-22T10:00:00Z',
-    tags: ['ui', 'components'],
-    estimatedHours: 12,
-  },
-  {
-    id: '4',
-    title: 'Fix mobile responsive issues',
-    description: 'Navigation menu overlaps content on screens smaller than 768px. Fix sidebar behavior on mobile.',
-    status: 'pending',
-    priority: 'medium',
-    type: 'bug',
-    createdAt: '2025-01-22T08:00:00Z',
-    updatedAt: '2025-01-22T08:00:00Z',
-    tags: ['mobile', 'css'],
-    estimatedHours: 3,
-  },
-  {
-    id: '5',
-    title: 'Add unit tests for API endpoints',
-    description: 'Write comprehensive unit tests for all REST API endpoints. Target 80% code coverage.',
-    status: 'backlog',
-    priority: 'medium',
-    type: 'test',
-    createdAt: '2025-01-22T07:00:00Z',
-    updatedAt: '2025-01-22T07:00:00Z',
-    tags: ['testing', 'api'],
-    estimatedHours: 6,
-  },
-  {
-    id: '6',
-    title: 'Write API documentation',
-    description: 'Document all API endpoints using OpenAPI spec. Include request/response examples.',
-    status: 'backlog',
-    priority: 'low',
-    type: 'docs',
-    createdAt: '2025-01-22T06:00:00Z',
-    updatedAt: '2025-01-22T06:00:00Z',
-    tags: ['documentation', 'api'],
-    estimatedHours: 4,
-  },
-  {
-    id: '7',
-    title: 'Optimize database queries',
-    description: 'Profile and optimize slow database queries. Add appropriate indexes and implement query caching.',
-    status: 'pending',
-    priority: 'high',
-    type: 'chore',
-    createdAt: '2025-01-21T15:00:00Z',
-    updatedAt: '2025-01-21T15:00:00Z',
-    tags: ['performance', 'database'],
-    estimatedHours: 5,
-  },
-];
+interface Project {
+  id: number;
+  name: string;
+}
 
 export const KanbanBoard: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(SAMPLE_TASKS);
+  // State
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewTask, setIsNewTask] = useState(false);
-  const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  // DnD sensors with keyboard support
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Fetch projects on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const projectList = await projectsApi.list();
+        setProjects(projectList.map(p => ({ id: p.id, name: p.name })));
+
+        // Select first project if available
+        if (projectList.length > 0 && !currentProjectId) {
+          setCurrentProjectId(projectList[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch projects:', err);
+        // Create a default project if none exist
+        try {
+          const newProject = await projectsApi.create({
+            name: 'Default Project',
+            description: 'Auto-created default project',
+          });
+          setProjects([{ id: newProject.id, name: newProject.name }]);
+          setCurrentProjectId(newProject.id);
+        } catch (createErr) {
+          setError('Failed to load or create projects');
+        }
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  // Fetch tasks when project changes
+  const fetchTasks = useCallback(async () => {
+    if (!currentProjectId) {
+      setTasks([]);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setError(null);
+      const taskList = await tasksApi.list(currentProjectId);
+      setTasks(taskList);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(`Failed to load tasks: ${err.message}`);
+      } else {
+        setError('Failed to load tasks');
+      }
+      console.error('Failed to fetch tasks:', err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [currentProjectId]);
+
+  useEffect(() => {
+    if (currentProjectId) {
+      setIsLoading(true);
+      fetchTasks();
+    }
+  }, [currentProjectId, fetchTasks]);
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    wsClient.connect();
+
+    const unsubTaskCreated = wsClient.on('task:created', (data) => {
+      const taskData = data as { task: Task };
+      setTasks((prev) => [...prev, taskData.task]);
+    });
+
+    const unsubTaskUpdated = wsClient.on('task:updated', (data) => {
+      const taskData = data as { task: Task };
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskData.task.id ? taskData.task : t))
+      );
+    });
+
+    const unsubTaskDeleted = wsClient.on('task:deleted', (data) => {
+      const taskData = data as { task_id: string };
+      setTasks((prev) => prev.filter((t) => t.id !== taskData.task_id));
+    });
+
+    const unsubTaskMoved = wsClient.on('task:moved', (data) => {
+      const taskData = data as { task: Task };
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskData.task.id ? taskData.task : t))
+      );
+    });
+
+    return () => {
+      unsubTaskCreated();
+      unsubTaskUpdated();
+      unsubTaskDeleted();
+      unsubTaskMoved();
+      wsClient.disconnect();
+    };
+  }, []);
 
   // Group tasks by status
   const getTasksByStatus = (status: TaskStatus): Task[] => {
@@ -114,38 +161,113 @@ export const KanbanBoard: React.FC = () => {
       );
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    e.dataTransfer.setData('taskId', taskId);
-    e.dataTransfer.effectAllowed = 'move';
+  // DnD handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const task = tasks.find((t) => t.id === active.id);
+    if (task) {
+      setActiveTask(task);
+    }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeTask = tasks.find((t) => t.id === active.id);
+    if (!activeTask) return;
+
+    // Check if dropping over a column
+    const overStatus = over.data.current?.status as TaskStatus | undefined;
+    if (overStatus && activeTask.status !== overStatus) {
+      // Move task to new column (optimistic update)
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === active.id
+            ? { ...t, status: overStatus, updatedAt: new Date().toISOString() }
+            : t
+        )
+      );
+    }
   };
 
-  const handleDrop = (e: React.DragEvent, newStatus: TaskStatus) => {
-    e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
 
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              status: newStatus,
-              updatedAt: new Date().toISOString(),
-              completedAt: newStatus === 'done' ? new Date().toISOString() : task.completedAt,
-            }
-          : task
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // Determine the target status
+    let newStatus: TaskStatus;
+    if (over.data.current?.status) {
+      newStatus = over.data.current.status as TaskStatus;
+    } else {
+      // Dropped on another task, get its status
+      const overTask = tasks.find((t) => t.id === over.id);
+      if (overTask) {
+        newStatus = overTask.status;
+      } else {
+        return;
+      }
+    }
+
+    // Only make API call if status actually changed
+    const originalTask = tasks.find((t) => t.id === taskId);
+    if (originalTask && originalTask.status !== newStatus) {
+      try {
+        const position = getTasksByStatus(newStatus).length;
+        await tasksApi.move(parseInt(taskId), newStatus, position);
+      } catch (err) {
+        // Revert on error
+        if (originalTask) {
+          setTasks((prev) =>
+            prev.map((t) => (t.id === taskId ? originalTask : t))
+          );
+        }
+        setError('Failed to move task');
+        console.error('Failed to move task:', err);
+      }
+    }
+  };
+
+  // Keyboard navigation handler for moving tasks between columns
+  const handleMoveTask = async (taskId: string, direction: 'left' | 'right') => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const currentIndex = columns.indexOf(task.status);
+    const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+
+    if (newIndex < 0 || newIndex >= columns.length) return;
+
+    const newStatus = columns[newIndex];
+    const originalTask = { ...task };
+
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, status: newStatus, updatedAt: new Date().toISOString() }
+          : t
       )
     );
-    setDragOverColumn(null);
-  };
 
-  const handleDragEnter = (status: TaskStatus) => {
-    setDragOverColumn(status);
+    // API call
+    try {
+      const position = getTasksByStatus(newStatus).length;
+      await tasksApi.move(parseInt(taskId), newStatus, position);
+    } catch (err) {
+      // Revert on error
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? originalTask : t))
+      );
+      setError('Failed to move task');
+      console.error('Failed to move task:', err);
+    }
   };
 
   // Task handlers
@@ -157,7 +279,7 @@ export const KanbanBoard: React.FC = () => {
 
   const handleAddTask = (status: TaskStatus) => {
     const newTask: Task = {
-      id: `${Date.now()}`,
+      id: `temp-${Date.now()}`,
       title: '',
       description: '',
       status,
@@ -172,37 +294,104 @@ export const KanbanBoard: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveTask = (updatedTask: Task) => {
-    if (isNewTask) {
-      setTasks((prevTasks) => [...prevTasks, updatedTask]);
-    } else {
-      setTasks((prevTasks) =>
-        prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
-      );
+  const handleSaveTask = async (updatedTask: Task) => {
+    if (!currentProjectId) {
+      setError('No project selected');
+      return;
     }
-    setIsModalOpen(false);
-    setSelectedTask(null);
-    setIsNewTask(false);
+
+    try {
+      if (isNewTask) {
+        const createdTask = await tasksApi.create(updatedTask, currentProjectId);
+        setTasks((prevTasks) => [...prevTasks, createdTask]);
+      } else {
+        const savedTask = await tasksApi.update(parseInt(updatedTask.id), updatedTask);
+        setTasks((prevTasks) =>
+          prevTasks.map((task) => (task.id === updatedTask.id ? savedTask : task))
+        );
+      }
+      setIsModalOpen(false);
+      setSelectedTask(null);
+      setIsNewTask(false);
+    } catch (err) {
+      setError(isNewTask ? 'Failed to create task' : 'Failed to update task');
+      console.error('Failed to save task:', err);
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
-    setIsModalOpen(false);
-    setSelectedTask(null);
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await tasksApi.delete(parseInt(taskId));
+      setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
+      setIsModalOpen(false);
+      setSelectedTask(null);
+    } catch (err) {
+      setError('Failed to delete task');
+      console.error('Failed to delete task:', err);
+    }
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchTasks();
   };
 
   const columns: TaskStatus[] = ['backlog', 'pending', 'in_progress', 'review', 'done'];
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-anthropic-cream dark:bg-anthropic-charcoal flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-anthropic-orange" />
+          <p className="text-gray-600 dark:text-gray-400">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-anthropic-cream dark:bg-anthropic-charcoal">
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-6 py-3 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+            aria-label="Dismiss error"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-anthropic-charcoal-light border-b border-gray-200 dark:border-gray-700">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Loki Mode Dashboard
-              </h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  Loki Mode Dashboard
+                </h1>
+                {/* Project Selector */}
+                {projects.length > 0 && (
+                  <select
+                    value={currentProjectId || ''}
+                    onChange={(e) => setCurrentProjectId(parseInt(e.target.value))}
+                    className="px-3 py-1.5 text-sm bg-gray-50 dark:bg-anthropic-charcoal border border-gray-200 dark:border-gray-700 rounded-lg focus:border-anthropic-orange focus:ring-1 focus:ring-anthropic-orange focus:outline-none"
+                    aria-label="Select project"
+                  >
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Autonomous task management and execution
               </p>
@@ -227,10 +416,12 @@ export const KanbanBoard: React.FC = () => {
               </button>
               {/* Refresh */}
               <button
-                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
                 aria-label="Refresh tasks"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
               {/* Settings */}
               <button
@@ -242,7 +433,8 @@ export const KanbanBoard: React.FC = () => {
               {/* Add Task */}
               <button
                 onClick={() => handleAddTask('backlog')}
-                className="flex items-center gap-2 px-4 py-2 bg-anthropic-orange hover:bg-anthropic-orange-hover text-white rounded-lg transition-colors"
+                disabled={!currentProjectId}
+                className="flex items-center gap-2 px-4 py-2 bg-anthropic-orange hover:bg-anthropic-orange-hover text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
                 New Task
@@ -272,24 +464,41 @@ export const KanbanBoard: React.FC = () => {
 
       {/* Board */}
       <main className="p-6">
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {columns.map((status) => (
-            <KanbanColumn
-              key={status}
-              status={status}
-              tasks={getTasksByStatus(status)}
-              onTaskClick={handleTaskClick}
-              onAddTask={handleAddTask}
-              onDragStart={handleDragStart}
-              onDragOver={(e) => {
-                handleDragOver(e);
-                handleDragEnter(status);
-              }}
-              onDrop={handleDrop}
-              isDragOver={dragOverColumn === status}
-            />
-          ))}
-        </div>
+        {!currentProjectId ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+            <p>No project selected. Create a project to get started.</p>
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {columns.map((status) => (
+                <KanbanColumn
+                  key={status}
+                  status={status}
+                  tasks={getTasksByStatus(status)}
+                  onTaskClick={handleTaskClick}
+                  onAddTask={handleAddTask}
+                  onMoveTask={handleMoveTask}
+                />
+              ))}
+            </div>
+
+            {/* Drag Overlay - shows the dragged item */}
+            <DragOverlay>
+              {activeTask ? (
+                <div className="opacity-80">
+                  <TaskCard task={activeTask} onClick={() => {}} />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
       </main>
 
       {/* Task Modal */}

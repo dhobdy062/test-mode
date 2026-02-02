@@ -269,7 +269,7 @@ async def list_projects(
     response = []
     for project in projects:
         task_count = len(project.tasks)
-        completed_count = len([t for t in project.tasks if t.status == TaskStatus.COMPLETED])
+        completed_count = len([t for t in project.tasks if t.status == TaskStatus.DONE])
         response.append(
             ProjectResponse(
                 id=project.id,
@@ -337,7 +337,7 @@ async def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     task_count = len(project.tasks)
-    completed_count = len([t for t in project.tasks if t.status == TaskStatus.COMPLETED])
+    completed_count = len([t for t in project.tasks if t.status == TaskStatus.DONE])
 
     return ProjectResponse(
         id=project.id,
@@ -383,7 +383,7 @@ async def update_project(
     })
 
     task_count = len(project.tasks)
-    completed_count = len([t for t in project.tasks if t.status == TaskStatus.COMPLETED])
+    completed_count = len([t for t in project.tasks if t.status == TaskStatus.DONE])
 
     return ProjectResponse(
         id=project.id,
@@ -523,7 +523,7 @@ async def update_task(
     update_data = task_update.model_dump(exclude_unset=True)
 
     # Handle status change to completed
-    if "status" in update_data and update_data["status"] == TaskStatus.COMPLETED:
+    if "status" in update_data and update_data["status"] == TaskStatus.DONE:
         update_data["completed_at"] = datetime.now()
 
     for field, value in update_data.items():
@@ -590,9 +590,9 @@ async def move_task(
     task.position = move.position
 
     # Set completed_at if moving to completed
-    if move.status == TaskStatus.COMPLETED and old_status != TaskStatus.COMPLETED:
+    if move.status == TaskStatus.DONE and old_status != TaskStatus.DONE:
         task.completed_at = datetime.now()
-    elif move.status != TaskStatus.COMPLETED:
+    elif move.status != TaskStatus.DONE:
         task.completed_at = None
 
     await db.flush()
