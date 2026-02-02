@@ -2,11 +2,17 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Auto-fetch version from GitHub VERSION file
     fetch('https://raw.githubusercontent.com/asklokesh/loki-mode/main/VERSION')
-        .then(response => response.text())
+        .then(response => {
+            if (!response.ok) throw new Error('Version fetch failed');
+            return response.text();
+        })
         .then(version => {
-            const versionEl = document.getElementById('app-version');
-            if (versionEl && version.trim()) {
-                versionEl.textContent = 'v' + version.trim();
+            // Update all version badges (mobile header and sidebar)
+            const versionEls = document.querySelectorAll('.version');
+            if (version.trim()) {
+                versionEls.forEach(el => {
+                    el.textContent = 'v' + version.trim();
+                });
             }
         })
         .catch(() => {
@@ -21,23 +27,66 @@ document.addEventListener('DOMContentLoaded', () => {
         mangle: false
     });
 
-    // Mobile hamburger menu
+    // Mobile hamburger menu - toggle sidebar
     const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
     const navMenu = document.getElementById('navMenu');
 
-    if (hamburger && navMenu) {
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('active');
-            navMenu.classList.toggle('active');
+    function closeSidebar() {
+        if (hamburger) {
+            hamburger.classList.remove('active');
+            hamburger.setAttribute('aria-expanded', 'false');
+        }
+        if (sidebar) sidebar.classList.remove('active');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function openSidebar() {
+        if (hamburger) {
+            hamburger.classList.add('active');
+            hamburger.setAttribute('aria-expanded', 'true');
+        }
+        if (sidebar) sidebar.classList.add('active');
+        if (sidebarOverlay) sidebarOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function toggleSidebar() {
+        if (sidebar.classList.contains('active')) {
+            closeSidebar();
+        } else {
+            openSidebar();
+        }
+    }
+
+    if (hamburger && sidebar) {
+        hamburger.addEventListener('click', toggleSidebar);
+
+        // Keyboard support for hamburger button
+        hamburger.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleSidebar();
+            }
         });
 
-        // Close menu when clicking a nav link
-        navMenu.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', () => {
-                hamburger.classList.remove('active');
-                navMenu.classList.remove('active');
+        // Close sidebar when clicking overlay
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', closeSidebar);
+        }
+
+        // Close sidebar when clicking a nav link (mobile)
+        if (navMenu) {
+            navMenu.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        closeSidebar();
+                    }
+                });
             });
-        });
+        }
     }
 
     // Navigation handling
@@ -99,11 +148,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close modal
     function closeModal() {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
     }
 
-    closeBtn.addEventListener('click', closeModal);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
 
     window.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -111,27 +164,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Close modal on escape key
+    // Close modal on escape key, also close sidebar on mobile
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.style.display === 'block') {
-            closeModal();
+        if (e.key === 'Escape') {
+            if (modal && modal.style.display === 'block') {
+                closeModal();
+            }
+            if (sidebar && sidebar.classList.contains('active')) {
+                closeSidebar();
+            }
         }
     });
-
-    // Normalize path - paths are relative to blog/ directory
-    // ../README.md -> goes to parent (loki-mode/) which is correct
-    // No transformation needed - browser resolves relative paths correctly
-    function normalizePath(path) {
-        return path;
-    }
 
     // Load markdown function
     async function loadMarkdown(path, container) {
         try {
             container.innerHTML = '<p style="text-align: center; color: #8b5cf6;">Loading...</p>';
-
-            const normalizedPath = normalizePath(path);
-            const response = await fetch(normalizedPath);
+            const response = await fetch(path);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -145,12 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Smooth scroll to top of modal content
             container.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } catch (error) {
-            const normalizedPath = normalizePath(path);
             container.innerHTML = `
                 <div style="text-align: center; padding: 2rem;">
                     <h2 style="color: #f59e0b;">Failed to load document</h2>
                     <p style="color: #cbd5e1;">${error.message}</p>
-                    <p style="color: #64748b; margin-top: 1rem;">Path: ${normalizedPath}</p>
+                    <p style="color: #64748b; margin-top: 1rem;">Path: ${path}</p>
                 </div>
             `;
         }
