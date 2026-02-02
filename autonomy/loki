@@ -832,6 +832,24 @@ cmd_issue_parse() {
 cmd_issue_view() {
     local issue_ref="${1:-}"
 
+    # Handle --help flag
+    if [[ "$issue_ref" == "--help" || "$issue_ref" == "-h" ]]; then
+        echo -e "${BOLD}loki issue view${NC} - View parsed GitHub issue details"
+        echo ""
+        echo "Usage: loki issue view <issue-ref>"
+        echo ""
+        echo "Issue Reference Formats:"
+        echo "  https://github.com/owner/repo/issues/123"
+        echo "  owner/repo#123"
+        echo "  #123                  (uses current repo)"
+        echo "  123                   (uses current repo)"
+        echo ""
+        echo "Examples:"
+        echo "  loki issue view 123"
+        echo "  loki issue view owner/repo#456"
+        exit 0
+    fi
+
     if [[ -z "$issue_ref" ]]; then
         echo -e "${RED}Error: Issue reference required${NC}"
         echo "Usage: loki issue view <issue-ref>"
@@ -992,6 +1010,12 @@ cmd_issue() {
             --repo)
                 if [[ -n "${2:-}" ]]; then
                     repo="$2"
+                    # Validate owner/repo format
+                    if [[ ! "$repo" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+                        echo -e "${RED}Invalid --repo format: $repo${NC}"
+                        echo "Expected: owner/repo (e.g., asklokesh/loki-mode)"
+                        exit 1
+                    fi
                     shift 2
                 else
                     echo -e "${RED}--repo requires a value (owner/repo)${NC}"
@@ -1000,11 +1024,23 @@ cmd_issue() {
                 ;;
             --repo=*)
                 repo="${1#*=}"
+                # Validate owner/repo format
+                if [[ ! "$repo" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+                    echo -e "${RED}Invalid --repo format: $repo${NC}"
+                    echo "Expected: owner/repo (e.g., asklokesh/loki-mode)"
+                    exit 1
+                fi
                 shift
                 ;;
             --number)
                 if [[ -n "${2:-}" ]]; then
                     number="$2"
+                    # Validate numeric
+                    if [[ ! "$number" =~ ^[0-9]+$ ]]; then
+                        echo -e "${RED}Invalid --number value: $number${NC}"
+                        echo "Expected: numeric issue number (e.g., 123)"
+                        exit 1
+                    fi
                     shift 2
                 else
                     echo -e "${RED}--number requires a value${NC}"
@@ -1013,6 +1049,12 @@ cmd_issue() {
                 ;;
             --number=*)
                 number="${1#*=}"
+                # Validate numeric
+                if [[ ! "$number" =~ ^[0-9]+$ ]]; then
+                    echo -e "${RED}Invalid --number value: $number${NC}"
+                    echo "Expected: numeric issue number (e.g., 123)"
+                    exit 1
+                fi
                 shift
                 ;;
             --start)
