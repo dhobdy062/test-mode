@@ -1989,9 +1989,16 @@ check_skill_installed() {
 init_loki_dir() {
     log_header "Initializing Loki Mode Directory"
 
-    # Clean up stale control files from previous sessions
-    # These can cause new sessions to pause/stop immediately
-    rm -f .loki/PAUSE .loki/STOP .loki/HUMAN_INPUT.md 2>/dev/null
+    # Clean up stale control files ONLY if no other session is running
+    # Deleting these while another session is active would destroy its signals
+    local existing_pid=""
+    if [ -f ".loki/loki.pid" ]; then
+        existing_pid=$(cat ".loki/loki.pid" 2>/dev/null)
+    fi
+    if [ -z "$existing_pid" ] || ! kill -0 "$existing_pid" 2>/dev/null; then
+        rm -f .loki/PAUSE .loki/STOP .loki/HUMAN_INPUT.md 2>/dev/null
+        rm -f .loki/loki.pid 2>/dev/null
+    fi
 
     mkdir -p .loki/{state,queue,messages,logs,config,prompts,artifacts,scripts}
     mkdir -p .loki/queue
@@ -4929,7 +4936,9 @@ cleanup() {
         log_warn "Double interrupt - stopping immediately"
         stop_dashboard
         stop_status_monitor
+        rm -f .loki/loki.pid .loki/PAUSE 2>/dev/null
         save_state ${RETRY_COUNT:-0} "interrupted" 130
+        emit_event_json "session_end" "result=130" "reason=interrupted"
         log_info "State saved. Run again to resume."
         exit 130
     fi
@@ -5158,6 +5167,21 @@ main() {
     # Initialize .loki directory
     init_loki_dir
 
+    # Session lock: prevent concurrent sessions on same repo
+    local pid_file=".loki/loki.pid"
+    if [ -f "$pid_file" ]; then
+        local existing_pid
+        existing_pid=$(cat "$pid_file" 2>/dev/null)
+        if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+            log_error "Another Loki session is already running (PID: $existing_pid)"
+            log_error "Stop it first with: loki stop"
+            exit 1
+        fi
+    fi
+
+    # Write PID file for ALL modes (foreground + background)
+    echo "$$" > "$pid_file"
+
     # Copy skill files to .loki/skills/ - makes CLI self-contained
     # No need to install Claude Code skill separately
     copy_skill_files
@@ -5283,6 +5307,7 @@ main() {
     # Cleanup
     stop_dashboard
     stop_status_monitor
+    rm -f .loki/loki.pid 2>/dev/null
 
     exit $result
 }

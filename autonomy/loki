@@ -572,6 +572,16 @@ cmd_stop() {
         # Also kill any orphaned loki-run temp scripts
         pkill -f "loki-run-" 2>/dev/null || true
 
+        # Kill dashboard if running
+        if [ -f "$LOKI_DIR/dashboard/dashboard.pid" ]; then
+            local dash_pid
+            dash_pid=$(cat "$LOKI_DIR/dashboard/dashboard.pid" 2>/dev/null)
+            if [ -n "$dash_pid" ] && kill -0 "$dash_pid" 2>/dev/null; then
+                kill "$dash_pid" 2>/dev/null || true
+            fi
+            rm -f "$LOKI_DIR/dashboard/dashboard.pid"
+        fi
+
         # Emit session stop event
         emit_event session cli stop "reason=user_requested"
         # Emit success pattern for clean stop (SYN-018)
@@ -957,11 +967,11 @@ cmd_provider_info() {
     esac
 }
 
-# Dashboard server management
-DASHBOARD_PID_DIR="${HOME}/.loki/dashboard"
+# Dashboard server management - project-local, unified with run.sh
+DASHBOARD_PID_DIR="${LOKI_DIR}/dashboard"
 DASHBOARD_PID_FILE="${DASHBOARD_PID_DIR}/dashboard.pid"
-DASHBOARD_DEFAULT_PORT=8420
-DASHBOARD_DEFAULT_HOST="localhost"
+DASHBOARD_DEFAULT_PORT=57374
+DASHBOARD_DEFAULT_HOST="127.0.0.1"
 
 cmd_dashboard() {
     local subcommand="${1:-}"
