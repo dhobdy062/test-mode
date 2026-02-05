@@ -4898,17 +4898,24 @@ Current state is saved. You can inspect:
 - `.loki/logs/` - Session logs
 EOF
 
-    # Wait for resume signal
+    # Wait for resume signal (unified: file removal, keyboard, or STOP)
     while [ "$PAUSED" = "true" ]; do
-        # Check for resume conditions
+        # Check for stop signal
         if [ -f "$loki_dir/STOP" ]; then
             rm -f "$loki_dir/STOP" "$loki_dir/PAUSED.md"
             PAUSED=false
             return 1
         fi
 
+        # Check if PAUSE file was removed (by CLI, API, or dashboard)
+        if [ ! -f "$loki_dir/PAUSE" ]; then
+            PAUSED=false
+            break
+        fi
+
         # Check for any key press (non-blocking)
         if read -t 1 -n 1 2>/dev/null; then
+            rm -f "$loki_dir/PAUSE"
             PAUSED=false
             break
         fi

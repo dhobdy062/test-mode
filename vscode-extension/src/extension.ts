@@ -181,6 +181,69 @@ function hasLokiDirectory(): boolean {
 }
 
 /**
+ * Get the .loki directory path for the current workspace
+ */
+function getLokiPath(): string | undefined {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+        return undefined;
+    }
+    return path.join(workspaceFolders[0].uri.fsPath, '.loki');
+}
+
+/**
+ * Check session state from filesystem (fallback when API unavailable).
+ * Checks .loki/loki.pid, .loki/session.json, and .loki/PAUSE files.
+ */
+function getFilesystemState(): { running: boolean; paused: boolean } {
+    const lokiPath = getLokiPath();
+    if (!lokiPath) {
+        return { running: false, paused: false };
+    }
+
+    let running = false;
+
+    // Check PID file (run.sh-invoked sessions)
+    const pidFile = path.join(lokiPath, 'loki.pid');
+    if (fs.existsSync(pidFile)) {
+        try {
+            const pidStr = fs.readFileSync(pidFile, 'utf-8').trim();
+            const pid = parseInt(pidStr, 10);
+            if (!isNaN(pid)) {
+                try {
+                    process.kill(pid, 0);
+                    running = true;
+                } catch {
+                    // Process not running, stale PID
+                }
+            }
+        } catch {
+            // Can't read PID file
+        }
+    }
+
+    // Check session.json (skill-invoked sessions)
+    if (!running) {
+        const sessionFile = path.join(lokiPath, 'session.json');
+        if (fs.existsSync(sessionFile)) {
+            try {
+                const data = JSON.parse(fs.readFileSync(sessionFile, 'utf-8'));
+                if (data.status === 'running') {
+                    running = true;
+                }
+            } catch {
+                // Can't parse session file
+            }
+        }
+    }
+
+    // Check PAUSE file
+    const paused = running && fs.existsSync(path.join(lokiPath, 'PAUSE'));
+
+    return { running, paused };
+}
+
+/**
  * Make an API request to the Loki server
  */
 async function apiRequest(endpoint: string, method: string = 'GET', body?: unknown): Promise<unknown> {
@@ -331,8 +394,19 @@ function handleStatusEvent(event: LokiEvent): void {
             tasksProvider.setTasks(taskItems);
         }
     } catch {
-        // API not available, silently ignore
-        logger.debug('Status event handling failed');
+        // API not available - fall back to filesystem state
+        logger.debug('API status unavailable, checking filesystem');
+        const fsState = getFilesystemState();
+        if (fsState.running !== isRunning) {
+            isRunning = fsState.running;
+            updateStatusBar();
+            updateContext();
+        }
+        if (fsState.paused !== isPaused) {
+            isPaused = fsState.paused;
+            updateStatusBar();
+            updateContext();
+        }
     }
 }
 

@@ -153,6 +153,16 @@ def get_status() -> StatusResponse:
     pid = int(pid_str) if pid_str.isdigit() else None
     running = is_process_running(pid) if pid else False
 
+    # Check for skill-invoked sessions (no PID, but session.json exists)
+    session_file = LOKI_DIR / "session.json"
+    if not running and session_file.exists():
+        try:
+            session_data = json.loads(session_file.read_text())
+            if session_data.get("status") == "running":
+                running = True
+        except (json.JSONDecodeError, KeyError):
+            pass
+
     # Determine state
     state = "stopped"
     if running:

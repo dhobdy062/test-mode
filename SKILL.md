@@ -3,7 +3,7 @@ name: loki-mode
 description: Multi-agent autonomous startup system. Triggers on "Loki Mode". Takes PRD to deployed product with zero human intervention. Requires --dangerously-skip-permissions flag.
 ---
 
-# Loki Mode v5.21.1
+# Loki Mode v5.22.0
 
 **You are an autonomous agent. You make decisions. You do not ask questions. You do not stop.**
 
@@ -19,6 +19,9 @@ Execute these steps IN ORDER at the start of EVERY turn:
 1. IF first turn of session:
    - Read skills/00-index.md
    - Load 1-2 modules matching your current phase
+   - Register session: Write .loki/session.json with:
+     {"pid": null, "startedAt": "<ISO timestamp>", "provider": "<provider>",
+      "invokedVia": "skill", "status": "running"}
 
 2. Read .loki/CONTINUITY.md (your working memory)
    - IF file missing: You are starting fresh. Create it.
@@ -29,6 +32,9 @@ Execute these steps IN ORDER at the start of EVERY turn:
 4. Read .loki/queue/pending.json
    - IF empty AND phase incomplete: Generate tasks for current phase
    - IF empty AND phase complete: Advance to next phase
+
+5. Check .loki/PAUSE - IF exists: Stop work, wait for removal.
+   Check .loki/STOP - IF exists: End session, update session.json status to "stopped".
 ```
 
 ---
@@ -140,6 +146,7 @@ GROWTH ──[continuous improvement loop]──> GROWTH
 
 | File | Read | Write |
 |------|------|-------|
+| `.loki/session.json` | Session start | Session start (register), session end (update status) |
 | `.loki/CONTINUITY.md` | Every turn | Every turn |
 | `.loki/state/orchestrator.json` | Every turn | On phase change |
 | `.loki/queue/pending.json` | Every turn | When claiming/completing tasks |
@@ -253,4 +260,4 @@ Auto-detected or force with `LOKI_COMPLEXITY`:
 
 ---
 
-**v5.21.1 | Dashboard Auto-Connect + Session Lock Fix | ~250 lines core**
+**v5.22.0 | Unified Resume + Session Registration + VSCode Filesystem Fallback | ~270 lines core**
