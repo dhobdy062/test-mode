@@ -345,7 +345,7 @@
         <!-- API Configuration -->
         <div class="api-config">
             <label>API URL:</label>
-            <input type="text" id="api-url" value="http://localhost:8420" placeholder="http://localhost:8420">
+            <input type="text" id="api-url" value="auto-detect" placeholder="auto-detect">
             <button id="connect-btn">Connect</button>
         </div>
 
@@ -366,7 +366,7 @@
                 Kanban-style task board with drag-and-drop support. Syncs with the Loki Mode API and supports local tasks.
             </p>
             <div class="code-block">
-                <code>&lt;loki-task-board api-url="http://localhost:8420" project-id="1"&gt;&lt;/loki-task-board&gt;</code>
+                <code>&lt;loki-task-board api-url="auto-detect" project-id="1"&gt;&lt;/loki-task-board&gt;</code>
             </div>
             <loki-task-board id="task-board"></loki-task-board>
         </section>
@@ -388,7 +388,7 @@
                     Control panel for managing Loki Mode sessions with status display and action buttons.
                 </p>
                 <div class="code-block">
-                    <code>&lt;loki-session-control api-url="http://localhost:8420"&gt;&lt;/loki-session-control&gt;</code>
+                    <code>&lt;loki-session-control api-url="auto-detect"&gt;&lt;/loki-session-control&gt;</code>
                 </div>
                 <div class="component-wrapper">
                     <div class="component-label">Full Mode</div>
@@ -415,7 +415,7 @@
                     Real-time log viewer with filtering, auto-scroll, and download capabilities.
                 </p>
                 <div class="code-block">
-                    <code>&lt;loki-log-stream api-url="http://localhost:8420" auto-scroll&gt;&lt;/loki-log-stream&gt;</code>
+                    <code>&lt;loki-log-stream api-url="auto-detect" auto-scroll&gt;&lt;/loki-log-stream&gt;</code>
                 </div>
                 <loki-log-stream id="log-stream" auto-scroll max-lines="100"></loki-log-stream>
             </section>
@@ -436,7 +436,7 @@
                 Browse and explore the Loki Mode memory system including episodic, semantic, and procedural memories.
             </p>
             <div class="code-block">
-                <code>&lt;loki-memory-browser api-url="http://localhost:8420" tab="summary"&gt;&lt;/loki-memory-browser&gt;</code>
+                <code>&lt;loki-memory-browser api-url="auto-detect" tab="summary"&gt;&lt;/loki-memory-browser&gt;</code>
             </div>
             <loki-memory-browser id="memory-browser"></loki-memory-browser>
         </section>
@@ -457,7 +457,7 @@
                 Visualize learning metrics from cross-tool learning signals including preferences, error patterns, success patterns, and tool efficiency.
             </p>
             <div class="code-block">
-                <code>&lt;loki-learning-dashboard api-url="http://localhost:8420" time-range="7d"&gt;&lt;/loki-learning-dashboard&gt;</code>
+                <code>&lt;loki-learning-dashboard api-url="auto-detect" time-range="7d"&gt;&lt;/loki-learning-dashboard&gt;</code>
             </div>
             <loki-learning-dashboard id="learning-dashboard"></loki-learning-dashboard>
         </section>

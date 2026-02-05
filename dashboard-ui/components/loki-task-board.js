@@ -11,7 +11,7 @@
  *   ></loki-task-board>
  *
  * Attributes:
- *   - api-url: API base URL (default: http://localhost:8420)
+ *   - api-url: API base URL (default: auto-detected from window.location.origin)
  *   - project-id: Filter tasks by project ID
  *   - theme: 'light' or 'dark' (default: auto-detect)
  *   - readonly: Disable drag-drop and editing
@@ -81,7 +81,7 @@ export class LokiTaskBoard extends LokiElement {
   }
 
   _setupApi() {
-    const apiUrl = this.getAttribute('api-url') || 'http://localhost:8420';
+    const apiUrl = this.getAttribute('api-url') || window.location.origin;
     this._api = getApiClient({ baseUrl: apiUrl });
 
     this._onTaskEvent = () => this._loadTasks();

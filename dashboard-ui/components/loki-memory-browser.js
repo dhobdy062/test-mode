@@ -10,7 +10,7 @@
  *   ></loki-memory-browser>
  *
  * Attributes:
- *   - api-url: API base URL (default: http://localhost:8420)
+ *   - api-url: API base URL (default: auto-detected from window.location.origin)
  *   - theme: 'light' or 'dark' (default: auto-detect)
  *   - tab: Initial tab ('summary' | 'episodes' | 'patterns' | 'skills')
  *
@@ -79,7 +79,7 @@ export class LokiMemoryBrowser extends LokiElement {
   }
 
   _setupApi() {
-    const apiUrl = this.getAttribute('api-url') || 'http://localhost:8420';
+    const apiUrl = this.getAttribute('api-url') || window.location.origin;
     this._api = getApiClient({ baseUrl: apiUrl });
   }
 

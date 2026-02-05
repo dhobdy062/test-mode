@@ -5172,7 +5172,8 @@ main() {
     if [ -f "$pid_file" ]; then
         local existing_pid
         existing_pid=$(cat "$pid_file" 2>/dev/null)
-        if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+        # Skip if it's our own PID or parent PID (background mode writes PID before child starts)
+        if [ -n "$existing_pid" ] && [ "$existing_pid" != "$$" ] && [ "$existing_pid" != "$PPID" ] && kill -0 "$existing_pid" 2>/dev/null; then
             log_error "Another Loki session is already running (PID: $existing_pid)"
             log_error "Stop it first with: loki stop"
             exit 1

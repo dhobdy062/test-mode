@@ -29,8 +29,8 @@ const CONTEXT_DEFAULTS = {
  * Default API configuration
  */
 const DEFAULT_CONFIG = {
-  baseUrl: 'http://localhost:8420',
-  wsUrl: 'ws://localhost:8420/ws',
+  baseUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:57374',
+  wsUrl: typeof window !== 'undefined' ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws` : 'ws://localhost:57374/ws',
   pollInterval: 2000,
   timeout: 10000,
   retryAttempts: 3,

@@ -411,7 +411,7 @@ function generateStandaloneHTML(bundleCode) {
         <span class="logo-text">Loki Mode</span>
       </div>
       <div class="header-actions">
-        <input type="text" class="api-url-input" id="api-url" value="http://localhost:8420" placeholder="API URL">
+        <input type="text" class="api-url-input" id="api-url" placeholder="API URL">
         <button class="api-btn" id="connect-btn">Connect</button>
         <button class="theme-toggle" id="theme-toggle">
           <span id="theme-label">Theme</span>
@@ -490,9 +490,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize theme label
   updateThemeLabel();
 
-  // API URL configuration
+  // API URL configuration - auto-detect from current server
   const apiUrlInput = document.getElementById('api-url');
   const connectBtn = document.getElementById('connect-btn');
+  const detectedUrl = window.location.origin;
+  apiUrlInput.value = detectedUrl;
 
   function updateComponentsApiUrl(apiUrl) {
     const components = [
@@ -508,6 +510,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     console.log('API URL updated:', apiUrl);
   }
+
+  // Auto-connect to current server on load
+  updateComponentsApiUrl(detectedUrl);
 
   connectBtn.addEventListener('click', function() {
     updateComponentsApiUrl(apiUrlInput.value);
@@ -545,12 +550,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Demo: Add initial log entries
+  // Add initial log entry and verify connection
   setTimeout(function() {
     const logStream = document.getElementById('log-stream');
     if (logStream && logStream.addLog) {
       logStream.addLog('Dashboard initialized', 'success');
-      logStream.addLog('Connecting to API...', 'info');
+      logStream.addLog('Connecting to ' + detectedUrl + '...', 'info');
+      // Verify API is reachable
+      fetch(detectedUrl + '/health').then(function(r) {
+        return r.json();
+      }).then(function(data) {
+        if (data.status === 'healthy') {
+          logStream.addLog('Connected to API', 'success');
+        }
+      }).catch(function() {
+        logStream.addLog('API not reachable at ' + detectedUrl, 'error');
+      });
     }
   }, 500);
 });

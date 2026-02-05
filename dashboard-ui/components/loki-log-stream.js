@@ -12,7 +12,7 @@
  *   ></loki-log-stream>
  *
  * Attributes:
- *   - api-url: API base URL (default: http://localhost:8420)
+ *   - api-url: API base URL (default: auto-detected from window.location.origin)
  *   - max-lines: Maximum number of log lines to keep (default: 500)
  *   - auto-scroll: Enable auto-scroll to bottom
  *   - theme: 'light' or 'dark' (default: auto-detect)
@@ -90,7 +90,7 @@ export class LokiLogStream extends LokiElement {
   }
 
   _setupApi() {
-    const apiUrl = this.getAttribute('api-url') || 'http://localhost:8420';
+    const apiUrl = this.getAttribute('api-url') || window.location.origin;
     this._api = getApiClient({ baseUrl: apiUrl });
 
     this._api.addEventListener(ApiEvents.LOG_MESSAGE, (e) => {
