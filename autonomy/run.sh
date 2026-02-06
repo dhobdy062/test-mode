@@ -3532,7 +3532,8 @@ start_dashboard() {
 
     # Start the FastAPI dashboard server
     # Dashboard module is at project root (parent of autonomy/)
-    PYTHONPATH="${SCRIPT_DIR%/*}" nohup python3 -m dashboard.server > "$log_file" 2>&1 &
+    # LOKI_SKILL_DIR tells server.py where to find static files
+    LOKI_SKILL_DIR="${SCRIPT_DIR%/*}" PYTHONPATH="${SCRIPT_DIR%/*}" nohup python3 -m dashboard.server > "$log_file" 2>&1 &
     DASHBOARD_PID=$!
 
     # Save PID for later cleanup
@@ -4936,6 +4937,32 @@ EOF
 cleanup() {
     local current_time=$(date +%s)
     local time_diff=$((current_time - INTERRUPT_LAST_TIME))
+    local loki_dir="${TARGET_DIR:-.}/.loki"
+
+    # If STOP file exists, this is an external stop (from `loki stop` CLI)
+    # Exit immediately without entering interactive pause mode
+    if [ -f "$loki_dir/STOP" ]; then
+        echo ""
+        log_warn "Stop signal received - shutting down"
+        rm -f "$loki_dir/STOP" "$loki_dir/PAUSE" "$loki_dir/PAUSED.md" 2>/dev/null
+        stop_dashboard
+        stop_status_monitor
+        rm -f "$loki_dir/loki.pid" 2>/dev/null
+        if [ -f "$loki_dir/session.json" ]; then
+            python3 -c "
+import json
+try:
+    with open('$loki_dir/session.json', 'r+') as f:
+        d = json.load(f); d['status'] = 'stopped'
+        f.seek(0); f.truncate(); json.dump(d, f)
+except: pass
+" 2>/dev/null || true
+        fi
+        save_state ${RETRY_COUNT:-0} "stopped" 0
+        emit_event_json "session_end" "result=0" "reason=stop_requested"
+        log_info "Session stopped."
+        exit 0
+    fi
 
     # If double Ctrl+C within 2 seconds, exit immediately
     if [ "$time_diff" -lt 2 ] && [ "$INTERRUPT_COUNT" -gt 0 ]; then

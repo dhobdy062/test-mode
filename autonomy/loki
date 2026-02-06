@@ -559,18 +559,27 @@ cmd_stop() {
                 local pid
                 pid=$(cat "$pid_file" 2>/dev/null)
                 if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                    # Kill all child processes first
+                    # Kill all child processes first (SIGTERM)
                     pkill -P "$pid" 2>/dev/null || true
-                    # Then kill the parent
+                    # Then kill the parent (SIGTERM)
                     kill "$pid" 2>/dev/null || true
                     killed_pid="$pid"
+
+                    # Wait briefly, then SIGKILL if still alive
+                    sleep 1
+                    if kill -0 "$pid" 2>/dev/null; then
+                        pkill -9 -P "$pid" 2>/dev/null || true
+                        kill -9 "$pid" 2>/dev/null || true
+                    fi
                 fi
                 rm -f "$pid_file"
             fi
         done
 
-        # Also kill any orphaned loki-run temp scripts
+        # Also kill any orphaned loki-run temp scripts (SIGTERM then SIGKILL)
         pkill -f "loki-run-" 2>/dev/null || true
+        sleep 0.5
+        pkill -9 -f "loki-run-" 2>/dev/null || true
 
         # Mark session.json as stopped (skill-invoked sessions)
         if [ -f "$LOKI_DIR/session.json" ]; then
@@ -587,12 +596,17 @@ except: pass
 " 2>/dev/null || true
         fi
 
+        # Clean up control files
+        rm -f "$LOKI_DIR/STOP" "$LOKI_DIR/PAUSE" "$LOKI_DIR/PAUSED.md" 2>/dev/null
+
         # Kill dashboard if running
         if [ -f "$LOKI_DIR/dashboard/dashboard.pid" ]; then
             local dash_pid
             dash_pid=$(cat "$LOKI_DIR/dashboard/dashboard.pid" 2>/dev/null)
             if [ -n "$dash_pid" ] && kill -0 "$dash_pid" 2>/dev/null; then
                 kill "$dash_pid" 2>/dev/null || true
+                sleep 0.5
+                kill -9 "$dash_pid" 2>/dev/null || true
             fi
             rm -f "$LOKI_DIR/dashboard/dashboard.pid"
         fi
@@ -1167,8 +1181,8 @@ cmd_dashboard_start() {
     echo ""
 
     # Start the dashboard server in background
-    # Using LOKI_DASHBOARD_HOST and LOKI_DASHBOARD_PORT env vars for the server
-    PYTHONPATH="$SKILL_DIR" LOKI_DASHBOARD_HOST="$host" LOKI_DASHBOARD_PORT="$port" \
+    # LOKI_SKILL_DIR tells server.py where to find static files
+    LOKI_SKILL_DIR="$SKILL_DIR" PYTHONPATH="$SKILL_DIR" LOKI_DASHBOARD_HOST="$host" LOKI_DASHBOARD_PORT="$port" \
         nohup "$python_cmd" -m dashboard.server > "$log_file" 2>&1 &
     local new_pid=$!
 

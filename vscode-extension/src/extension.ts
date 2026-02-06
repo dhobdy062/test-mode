@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { spawn } from 'child_process';
 import { Config } from './utils/config';
 import { Logger, logger } from './utils/logger';
 import { ChatViewProvider } from './views/chatViewProvider';
@@ -435,6 +436,68 @@ function stopPolling(): void {
 }
 
 /**
+ * Ensure the dashboard server is running.
+ * Checks health endpoint first; if unreachable, spawns `loki dashboard start`
+ * as a detached child process and waits up to 5 seconds for it to become healthy.
+ * Returns true if the server is reachable, false otherwise.
+ */
+async function ensureDashboardRunning(): Promise<boolean> {
+    // Check if already running via health endpoint
+    try {
+        await apiRequest('/health');
+        logger.info('Dashboard server is already running');
+        return true;
+    } catch {
+        logger.info('Dashboard server not running, attempting to start...');
+    }
+
+    // Spawn the dashboard server in detached mode
+    const lokiPath = getLokiPath();
+    const env: Record<string, string> = { ...process.env as Record<string, string> };
+    if (lokiPath) {
+        env.LOKI_DIR = lokiPath;
+    }
+
+    try {
+        const child = spawn('loki', ['dashboard', 'start'], {
+            detached: true,
+            stdio: 'ignore',
+            env,
+        });
+
+        // Allow the child to outlive the extension process
+        child.unref();
+
+        child.on('error', (err) => {
+            logger.error('Failed to spawn loki dashboard process', err);
+        });
+
+        logger.info('Spawned loki dashboard start process');
+    } catch (error) {
+        logger.error('Failed to spawn dashboard server', error);
+        return false;
+    }
+
+    // Poll health endpoint for up to 5 seconds (500ms intervals)
+    const maxAttempts = 10;
+    const intervalMs = 500;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+        try {
+            await apiRequest('/health');
+            logger.info(`Dashboard server became healthy after ${attempt * intervalMs}ms`);
+            return true;
+        } catch {
+            logger.debug(`Health check attempt ${attempt}/${maxAttempts} failed`);
+        }
+    }
+
+    logger.error('Dashboard server did not become healthy within 5 seconds');
+    return false;
+}
+
+/**
  * Connect to the Loki API
  */
 async function connectToApi(): Promise<boolean> {
@@ -446,7 +509,14 @@ async function connectToApi(): Promise<boolean> {
         startPolling();
         return true;
     } catch {
-        logger.warn('Could not connect to Loki API - server may not be running');
+        logger.warn('Could not connect to Loki API - attempting to start dashboard server');
+        const started = await ensureDashboardRunning();
+        if (started) {
+            logger.info('Dashboard server started, connected to Loki API');
+            startPolling();
+            return true;
+        }
+        logger.warn('Could not start dashboard server');
         return false;
     }
 }
@@ -461,6 +531,14 @@ async function startLokiMode(): Promise<void> {
     }
 
     logger.info('Starting Loki Mode...');
+
+    // Ensure the dashboard API server is running before making API calls
+    const dashboardReady = await ensureDashboardRunning();
+    if (!dashboardReady) {
+        vscode.window.showErrorMessage('Failed to start Loki dashboard server. Cannot start Loki Mode.');
+        logger.error('Dashboard server not available, aborting start');
+        return;
+    }
 
     // Track command and start workflow
     learningCollector?.trackCommand('loki.start', ['loki.stop', 'loki.pause']);

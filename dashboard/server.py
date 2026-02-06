@@ -1550,14 +1550,27 @@ except ImportError as e:
 from fastapi.responses import FileResponse, HTMLResponse
 
 # Find static files in multiple possible locations
-DASHBOARD_DIR = os.path.dirname(__file__)
+DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(DASHBOARD_DIR)
 
 # Possible static file locations (in order of preference)
+# Resolves correctly regardless of PYTHONPATH, symlinks, or install method
 STATIC_LOCATIONS = [
     os.path.join(DASHBOARD_DIR, "static"),           # dashboard/static/ (production)
     os.path.join(PROJECT_ROOT, "dashboard-ui", "dist"),  # dashboard-ui/dist/ (development)
 ]
+
+# Add LOKI_SKILL_DIR env var fallback (set by loki CLI and run.sh)
+_skill_dir = os.environ.get("LOKI_SKILL_DIR", "")
+if _skill_dir:
+    STATIC_LOCATIONS.append(os.path.join(_skill_dir, "dashboard", "static"))
+    STATIC_LOCATIONS.append(os.path.join(_skill_dir, "dashboard-ui", "dist"))
+
+# Add ~/.claude/skills/loki-mode fallback (installed skill location)
+_home_skill = os.path.join(os.path.expanduser("~"), ".claude", "skills", "loki-mode")
+if os.path.isdir(_home_skill):
+    STATIC_LOCATIONS.append(os.path.join(_home_skill, "dashboard", "static"))
+    STATIC_LOCATIONS.append(os.path.join(_home_skill, "dashboard-ui", "dist"))
 
 STATIC_DIR = None
 for loc in STATIC_LOCATIONS:
