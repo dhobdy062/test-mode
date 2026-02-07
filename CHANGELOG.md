@@ -5,6 +5,17 @@ All notable changes to Loki Mode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.26.1] - 2026-02-07
+
+### Fixed
+- Release workflow YAML parse error (root cause of npm stuck at 5.23.0)
+- Shell bugs: md5sum macOS compat, verdict init, contrarian regex, HUMAN_INPUT subshell
+- Dashboard server default port 8420 to 57374
+- CI: Add dashboard-ui/package-lock.json for npm ci
+- Stale CLI version references (Claude v2.1.34, Gemini v0.27.3)
+
+---
+
 ## v5.26.0 - Developer Adoption and Community Infrastructure
 
 ### Added
