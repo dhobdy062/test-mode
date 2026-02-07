@@ -353,8 +353,6 @@ function generateStandaloneHTML(bundleCode) {
 
     /* Section pages */
     .section-page {
-      min-height: calc(100vh - 48px);
-      scroll-snap-align: start;
       padding-bottom: 32px;
     }
 
