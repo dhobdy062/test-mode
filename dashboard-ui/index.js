@@ -65,6 +65,7 @@ export {
 };
 
 // Components
+export { LokiOverview } from './components/loki-overview.js';
 export { LokiTaskBoard } from './components/loki-task-board.js';
 export { LokiSessionControl } from './components/loki-session-control.js';
 export { LokiLogStream } from './components/loki-log-stream.js';
@@ -107,6 +108,7 @@ export function init(config = {}) {
 
 // Auto-register components when imported
 const componentModules = [
+  './components/loki-overview.js',
   './components/loki-task-board.js',
   './components/loki-session-control.js',
   './components/loki-log-stream.js',

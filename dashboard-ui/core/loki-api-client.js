@@ -837,6 +837,43 @@ export class LokiApiClient extends EventTarget {
   }
 
   // ============================================
+  // Session Control API
+  // ============================================
+
+  /**
+   * Pause the current session
+   */
+  async pauseSession() {
+    return this._post('/api/control/pause', {});
+  }
+
+  /**
+   * Resume a paused session
+   */
+  async resumeSession() {
+    return this._post('/api/control/resume', {});
+  }
+
+  /**
+   * Stop the current session
+   */
+  async stopSession() {
+    return this._post('/api/control/stop', {});
+  }
+
+  // ============================================
+  // Logs API
+  // ============================================
+
+  /**
+   * Get recent log entries
+   * @param {number} lines - Max lines to return
+   */
+  async getLogs(lines = 100) {
+    return this._get(`/api/logs?lines=${lines}`);
+  }
+
+  // ============================================
   // Polling Mode (Fallback)
   // ============================================
 

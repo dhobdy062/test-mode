@@ -202,15 +202,36 @@ export class LokiSessionControl extends LokiElement {
     this.dispatchEvent(new CustomEvent('session-start', { detail: this._status }));
   }
 
-  _triggerPause() {
+  async _triggerPause() {
+    try {
+      await this._api.pauseSession();
+      this._status.mode = 'paused';
+      this.render();
+    } catch (err) {
+      console.error('Failed to pause session:', err);
+    }
     this.dispatchEvent(new CustomEvent('session-pause', { detail: this._status }));
   }
 
-  _triggerResume() {
+  async _triggerResume() {
+    try {
+      await this._api.resumeSession();
+      this._status.mode = 'running';
+      this.render();
+    } catch (err) {
+      console.error('Failed to resume session:', err);
+    }
     this.dispatchEvent(new CustomEvent('session-resume', { detail: this._status }));
   }
 
-  _triggerStop() {
+  async _triggerStop() {
+    try {
+      await this._api.stopSession();
+      this._status.mode = 'stopped';
+      this.render();
+    } catch (err) {
+      console.error('Failed to stop session:', err);
+    }
     this.dispatchEvent(new CustomEvent('session-stop', { detail: this._status }));
   }
 

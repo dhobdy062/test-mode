@@ -102,8 +102,39 @@ export class LokiLogStream extends LokiElement {
     const logFile = this.getAttribute('log-file');
     if (logFile) {
       this._pollLogFile(logFile);
+    } else {
+      // Poll /api/logs endpoint as fallback when no log-file attribute
+      this._pollApiLogs();
     }
     // WebSocket-based logs are handled via event listener
+  }
+
+  async _pollApiLogs() {
+    let lastCount = 0;
+
+    const poll = async () => {
+      try {
+        const entries = await this._api.getLogs(200);
+        if (Array.isArray(entries) && entries.length > lastCount) {
+          const newEntries = entries.slice(lastCount);
+          for (const entry of newEntries) {
+            if (entry.message && entry.message.trim()) {
+              this._addLog({
+                message: entry.message,
+                level: entry.level || 'info',
+                timestamp: entry.timestamp || new Date().toLocaleTimeString(),
+              });
+            }
+          }
+          lastCount = entries.length;
+        }
+      } catch (error) {
+        // API not available, will retry on next poll
+      }
+    };
+
+    poll();
+    this._apiPollInterval = setInterval(poll, 2000);
   }
 
   async _pollLogFile(logFile) {
@@ -140,6 +171,10 @@ export class LokiLogStream extends LokiElement {
     if (this._pollInterval) {
       clearInterval(this._pollInterval);
       this._pollInterval = null;
+    }
+    if (this._apiPollInterval) {
+      clearInterval(this._apiPollInterval);
+      this._apiPollInterval = null;
     }
   }
 

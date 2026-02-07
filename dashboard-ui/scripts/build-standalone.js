@@ -370,40 +370,7 @@ function generateStandaloneHTML(bundleCode) {
       color: var(--loki-text-primary);
     }
 
-    /* Overview grid */
-    .overview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-top: 8px;
-    }
-
-    .overview-card {
-      background: var(--loki-bg-card);
-      border: 1px solid var(--loki-border);
-      border-radius: 10px;
-      padding: 20px;
-      transition: border-color 0.2s;
-    }
-
-    .overview-card:hover {
-      border-color: var(--loki-border-light);
-    }
-
-    .overview-card-label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--loki-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-
-    .overview-card-value {
-      font-size: 24px;
-      font-weight: 600;
-      color: var(--loki-text-primary);
-    }
+    /* Overview handled by <loki-overview> shadow DOM */
 
     /* Offline Banner */
     .offline-banner {
@@ -537,27 +504,7 @@ function generateStandaloneHTML(bundleCode) {
     <main class="main-content" id="main-content">
       <!-- Overview (default) -->
       <div class="section-page" id="page-overview">
-        <div class="section-page-header">
-          <h2 class="section-page-title">Overview</h2>
-        </div>
-        <div class="overview-grid">
-          <div class="overview-card">
-            <div class="overview-card-label">Session</div>
-            <div class="overview-card-value" id="overview-status">--</div>
-          </div>
-          <div class="overview-card">
-            <div class="overview-card-label">Iteration</div>
-            <div class="overview-card-value" id="overview-iteration">--</div>
-          </div>
-          <div class="overview-card">
-            <div class="overview-card-label">Tasks</div>
-            <div class="overview-card-value" id="overview-tasks">--</div>
-          </div>
-          <div class="overview-card">
-            <div class="overview-card-label">Model</div>
-            <div class="overview-card-value" id="overview-model">--</div>
-          </div>
-        </div>
+        <loki-overview id="overview"></loki-overview>
       </div>
 
       <!-- Task Board -->
@@ -637,6 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function updateComponentsApiUrl(apiUrl) {
     var components = [
+      'overview',
       'task-board',
       'session-control',
       'log-stream',
@@ -761,26 +709,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 500);
 
-  // Overview cards polling
-  function updateOverviewCards() {
-    fetch(detectedUrl + '/api/status').then(function(r) {
-      return r.json();
-    }).then(function(data) {
-      var statusEl = document.getElementById('overview-status');
-      var iterEl = document.getElementById('overview-iteration');
-      var tasksEl = document.getElementById('overview-tasks');
-      var modelEl = document.getElementById('overview-model');
-      if (statusEl) statusEl.textContent = (data.status || data.state || 'idle').toUpperCase();
-      if (iterEl) iterEl.textContent = data.iteration || data.current_iteration || '0';
-      if (modelEl) modelEl.textContent = data.model || data.current_model || '--';
-      if (tasksEl) {
-        var total = (data.tasks_completed || 0) + (data.tasks_remaining || 0);
-        tasksEl.textContent = total > 0 ? (data.tasks_completed || 0) + '/' + total : '--';
-      }
-    }).catch(function() {});
-  }
-  updateOverviewCards();
-  setInterval(updateOverviewCards, 5000);
+  // Overview cards are now handled by the <loki-overview> component
+  // which polls /api/status reactively via the unified API client.
 });
   </script>
 </body>

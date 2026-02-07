@@ -1364,17 +1364,30 @@ async def get_learning_metrics(
         s = e.get("data", {}).get("source", "unknown")
         by_source[s] = by_source.get(s, 0) + 1
 
+    # Load aggregation data from file if available
+    aggregation = {
+        "preferences": [],
+        "error_patterns": [],
+        "success_patterns": [],
+        "tool_efficiencies": [],
+    }
+    agg_file = _LOKI_DIR / "metrics" / "aggregation.json"
+    if agg_file.exists():
+        try:
+            agg_data = json.loads(agg_file.read_text())
+            aggregation["preferences"] = agg_data.get("preferences", [])
+            aggregation["error_patterns"] = agg_data.get("error_patterns", [])
+            aggregation["success_patterns"] = agg_data.get("success_patterns", [])
+            aggregation["tool_efficiencies"] = agg_data.get("tool_efficiencies", [])
+        except Exception:
+            pass
+
     return {
         "totalSignals": len(events),
         "signalsByType": by_type,
         "signalsBySource": by_source,
         "avgConfidence": 0,
-        "aggregation": {
-            "preferences": [],
-            "error_patterns": [],
-            "success_patterns": [],
-            "tool_efficiencies": [],
-        },
+        "aggregation": aggregation,
     }
 
 
@@ -1429,8 +1442,85 @@ async def get_learning_aggregation():
 
 @app.post("/api/learning/aggregate")
 async def trigger_aggregation():
-    """Trigger learning aggregation (returns current state)."""
-    return {"status": "ok", "message": "Aggregation triggered"}
+    """Aggregate learning signals from events.jsonl into structured metrics."""
+    events_file = _LOKI_DIR / "events.jsonl"
+    preferences: dict = {}
+    error_patterns: dict = {}
+    success_patterns: dict = {}
+    tool_stats: dict = {}  # tool_name -> {"count": N, "total_ms": N, "successes": N}
+
+    if events_file.exists():
+        try:
+            for raw_line in events_file.read_text().strip().split("\n"):
+                if not raw_line.strip():
+                    continue
+                try:
+                    event = json.loads(raw_line)
+                except json.JSONDecodeError:
+                    continue
+
+                if event.get("type") != "learning_signal":
+                    continue
+
+                signal_type = event.get("signal_type", "")
+                data = event.get("data", {})
+
+                if signal_type == "preference":
+                    key = data.get("preference_key", "unknown")
+                    preferences[key] = preferences.get(key, 0) + 1
+
+                elif signal_type == "error":
+                    etype = data.get("error_type", "unknown")
+                    error_patterns[etype] = error_patterns.get(etype, 0) + 1
+
+                elif signal_type == "success":
+                    pname = data.get("pattern_name", "unknown")
+                    success_patterns[pname] = success_patterns.get(pname, 0) + 1
+
+                elif signal_type == "tool_usage":
+                    tool_name = data.get("tool_name", "unknown")
+                    duration = data.get("duration_ms", 0)
+                    success = data.get("success", False)
+                    if tool_name not in tool_stats:
+                        tool_stats[tool_name] = {"count": 0, "total_ms": 0, "successes": 0}
+                    tool_stats[tool_name]["count"] += 1
+                    tool_stats[tool_name]["total_ms"] += duration
+                    if success:
+                        tool_stats[tool_name]["successes"] += 1
+        except Exception:
+            pass
+
+    # Build structured result
+    pref_list = [{"key": k, "count": v} for k, v in sorted(preferences.items(), key=lambda x: -x[1])]
+    error_list = [{"type": k, "count": v} for k, v in sorted(error_patterns.items(), key=lambda x: -x[1])]
+    success_list = [{"name": k, "count": v} for k, v in sorted(success_patterns.items(), key=lambda x: -x[1])]
+    tool_list = []
+    for tname, stats in sorted(tool_stats.items(), key=lambda x: -x[1]["count"]):
+        avg_ms = stats["total_ms"] / stats["count"] if stats["count"] else 0
+        tool_list.append({
+            "tool": tname,
+            "count": stats["count"],
+            "avg_duration_ms": round(avg_ms, 2),
+            "success_rate": round(stats["successes"] / stats["count"], 4) if stats["count"] else 0,
+        })
+
+    result = {
+        "preferences": pref_list,
+        "error_patterns": error_list,
+        "success_patterns": success_list,
+        "tool_efficiencies": tool_list,
+        "aggregated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # Write to metrics directory
+    metrics_dir = _LOKI_DIR / "metrics"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        (metrics_dir / "aggregation.json").write_text(json.dumps(result, indent=2))
+    except Exception:
+        pass
+
+    return result
 
 
 @app.get("/api/learning/preferences")
@@ -1698,6 +1788,36 @@ async def get_agents():
         else:
             agent["alive"] = False
 
+    # Fallback: read agents from dashboard-state.json if agents.json is empty
+    if not agents:
+        state_file = _LOKI_DIR / "dashboard-state.json"
+        if state_file.exists():
+            try:
+                state = json.loads(state_file.read_text())
+                state_agents = state.get("agents", [])
+                for sa in state_agents:
+                    if isinstance(sa, dict):
+                        agents.append({
+                            "id": sa.get("id", sa.get("name", "unknown")),
+                            "name": sa.get("name", ""),
+                            "type": sa.get("type", ""),
+                            "pid": sa.get("pid"),
+                            "task": sa.get("task", ""),
+                            "status": sa.get("status", "unknown"),
+                            "alive": False,
+                        })
+                # Check process status for fallback agents too
+                for agent in agents:
+                    pid = agent.get("pid")
+                    if pid:
+                        try:
+                            os.kill(int(pid), 0)
+                            agent["alive"] = True
+                        except (OSError, ValueError):
+                            agent["alive"] = False
+            except Exception:
+                pass
+
     return agents
 
 
@@ -1777,14 +1897,64 @@ async def get_logs(lines: int = 100):
     log_dir = _LOKI_DIR / "logs"
     entries = []
 
+    # Regex for full timestamp: [2026-02-07T01:32:00] [INFO] msg  or  2026-02-07 01:32:00 INFO msg
+    _LOG_TS_FULL = re.compile(
+        r'^\[?(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})\]?\s*\[?(\w+)\]?\s*(.*)'
+    )
+    # Regex for time-only: 01:32:00 INFO msg
+    _LOG_TS_SHORT = re.compile(
+        r'^(\d{2}:\d{2}:\d{2})\s+(\w+)\s+(.*)'
+    )
+    # Map common level strings to normalized lowercase
+    _LEVEL_MAP = {
+        "info": "info",
+        "error": "error",
+        "warn": "warning",
+        "warning": "warning",
+        "debug": "debug",
+        "critical": "critical",
+        "fatal": "critical",
+        "trace": "debug",
+    }
+
     if log_dir.exists():
         # Read the most recent log file
         log_files = sorted(log_dir.glob("*.log"), key=lambda f: f.stat().st_mtime, reverse=True)
         for log_file in log_files[:1]:
             try:
+                # Use file mtime as fallback timestamp
+                file_mtime = datetime.fromtimestamp(log_file.stat().st_mtime).strftime(
+                    "%Y-%m-%dT%H:%M:%S"
+                )
                 content = log_file.read_text()
-                for line in content.strip().split("\n")[-lines:]:
-                    entries.append({"message": line, "level": "info", "timestamp": ""})
+                for raw_line in content.strip().split("\n")[-lines:]:
+                    timestamp = ""
+                    level = "info"
+                    message = raw_line
+
+                    # Try full timestamp pattern first
+                    m = _LOG_TS_FULL.match(raw_line)
+                    if m:
+                        timestamp = m.group(1).replace(" ", "T")
+                        level = _LEVEL_MAP.get(m.group(2).lower(), "info")
+                        message = m.group(3)
+                    else:
+                        # Try short time-only pattern
+                        m = _LOG_TS_SHORT.match(raw_line)
+                        if m:
+                            timestamp = m.group(1)
+                            level = _LEVEL_MAP.get(m.group(2).lower(), "info")
+                            message = m.group(3)
+
+                    # Fallback: use file modification time if no timestamp parsed
+                    if not timestamp:
+                        timestamp = file_mtime
+
+                    entries.append({
+                        "message": message,
+                        "level": level,
+                        "timestamp": timestamp,
+                    })
             except Exception:
                 pass
 
