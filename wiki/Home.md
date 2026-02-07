@@ -25,8 +25,10 @@ Loki Mode is an enterprise-grade autonomous AI development orchestrator that:
 | [[Getting Started]] | Install and run your first session |
 | [[CLI Reference]] | Complete command documentation |
 | [[API Reference]] | REST API and WebSocket endpoints |
+| [[Dashboard]] | Dark-themed web dashboard with council tab |
 | [[Configuration]] | Config files and options |
 | [[Environment Variables]] | All environment variables |
+| [[Security]] | Security hardening and best practices |
 | [[Enterprise Features]] | Auth, audit, registry, sandbox |
 
 ---
@@ -40,6 +42,7 @@ Loki Mode is an enterprise-grade autonomous AI development orchestrator that:
 - **Multi-Provider Support** - Use Claude, Codex, or Gemini
 - **Cross-Project Learning** - AI improves from every session
 - **VS Code Extension** - Integrated IDE experience
+- **Dark Dashboard** - Vercel/Linear-inspired dark theme with sidebar navigation
 
 ### For Enterprises
 
@@ -48,6 +51,8 @@ Loki Mode is an enterprise-grade autonomous AI development orchestrator that:
 - **Docker Sandbox** - Isolated secure execution environment
 - **Project Registry** - Multi-project orchestration
 - **Staged Autonomy** - Approval gates for sensitive operations
+- **Completion Council** - 3-member voting system with anti-sycophancy checks
+- **Security Hardening** - Path traversal, XSS, injection, and memory leak protections
 
 ---
 

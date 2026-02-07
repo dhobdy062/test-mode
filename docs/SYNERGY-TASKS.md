@@ -90,6 +90,11 @@ This document tracks all implementation tasks to achieve tool synergy and compet
 | SEC-003 | Fix path traversal in mcp/server.py | Done | High | Added validate_path() |
 | SEC-004 | Improve fork bomb pattern detection | Done | Medium | Regex updated in v5.16.0 |
 | SEC-005 | Add input sanitization to all hooks | Done | High | Via path validation |
+| SEC-006 | Fix path traversal in storage.py | Done | High | Path validation in v5.25.0 |
+| SEC-007 | Fix XSS in log-stream | Done | High | Output sanitization in v5.25.0 |
+| SEC-008 | Fix memory leak in session-control | Done | Medium | Resource cleanup in v5.25.0 |
+| SEC-009 | Fix Python injection in completion-council.sh | Done | Critical | Input sanitization in v5.25.0 |
+| SEC-010 | Make CORS configurable | Done | Medium | CORS_ALLOWED_ORIGINS env var in v5.25.0 |
 
 ---
 
@@ -128,11 +133,11 @@ SEC-001, SEC-002 -> Should be done ASAP (Critical)
 | Phase 4 (Learning) | 8 | 1 | 0 | 7 |
 | Phase 5 (Dashboard) | 4 | 1 | 0 | 3 |
 | Competitive | 7 | 2 | 0 | 5 |
-| Security | 5 | 5 | 0 | 0 |
+| Security | 10 | 10 | 0 | 0 |
 | Quick Wins | 5 | 5 | 0 | 0 |
-| **Total** | **45** | **25** | **0** | **20** |
+| **Total** | **50** | **30** | **0** | **20** |
 
 ---
 
-*Last Updated: 2026-02-04*
-*v5.19.0 Release: 45 tasks completed by 22 parallel Opus agents with peer review (2 reviewers per task), fix agents, and verification*
+*Last Updated: 2026-02-06*
+*v5.25.0: 50 tasks tracked, 30 completed. Security hardening (5 new fixes) added in v5.25.0.*

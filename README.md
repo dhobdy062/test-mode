@@ -2,12 +2,15 @@
 
 **The First Truly Autonomous Multi-Agent Startup System**
 
+[![npm version](https://img.shields.io/npm/v/loki-mode)](https://www.npmjs.com/package/loki-mode)
+[![npm downloads](https://img.shields.io/npm/dw/loki-mode)](https://www.npmjs.com/package/loki-mode)
+[![GitHub stars](https://img.shields.io/github/stars/asklokesh/loki-mode)](https://github.com/asklokesh/loki-mode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude-Code-orange)](https://claude.ai)
 [![Agent Types](https://img.shields.io/badge/Agent%20Types-41-blue)]()
 [![Loki Mode](https://img.shields.io/badge/Loki%20Mode-98.78%25%20Pass%401-blueviolet)](benchmarks/results/)
 [![HumanEval](https://img.shields.io/badge/HumanEval-98.17%25%20Pass%401-brightgreen)](benchmarks/results/)
 [![SWE-bench](https://img.shields.io/badge/SWE--bench-99.67%25%20Patch%20Gen-brightgreen)](benchmarks/results/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **[Documentation Website](https://asklokesh.github.io/loki-mode/)** | **[Architecture](https://asklokesh.github.io/loki-mode/blog/#architecture)** | **[Research](https://asklokesh.github.io/loki-mode/blog/#research)** | **[Comparisons](https://asklokesh.github.io/loki-mode/blog/#comparisons)**
 
@@ -37,81 +40,22 @@
 
 ## Usage
 
-### Option 1: Claude Code Skill (Recommended)
-
-```bash
-# Install
-git clone https://github.com/asklokesh/loki-mode.git ~/.claude/skills/loki-mode
-
-# Run
-claude --dangerously-skip-permissions
-
-# Then say:
-Loki Mode with PRD at ./my-prd.md
-```
-
-### Option 2: Shell Script
-
-```bash
-# Clone repo
-git clone https://github.com/asklokesh/loki-mode.git
-cd loki-mode
-
-# Run directly
-./autonomy/run.sh ./my-prd.md
-```
-
-### Option 3: npm
+### Option 1: npm (Recommended)
 
 ```bash
 npm install -g loki-mode
 loki start ./my-prd.md
 ```
 
-### Option 4: Homebrew (macOS/Linux)
+### Option 2: Claude Code Skill
 
 ```bash
-brew install asklokesh/tap/loki-mode
-loki start ./my-prd.md
+git clone https://github.com/asklokesh/loki-mode.git ~/.claude/skills/loki-mode
+claude --dangerously-skip-permissions
+# Then say: Loki Mode with PRD at ./my-prd.md
 ```
 
-### Option 5: Docker
-
-```bash
-docker run -v $(pwd):/workspace asklokesh/loki-mode:5.25.0 ./my-prd.md
-```
-
-### Option 6: VS Code Extension
-
-Install directly from the VS Code Marketplace for a visual interface:
-
-```bash
-# From VS Code
-1. Open Extensions (Cmd+Shift+X / Ctrl+Shift+X)
-2. Search "loki-mode"
-3. Click Install
-
-# Or via command line
-code --install-extension asklokesh.loki-mode
-```
-
-**Important:** Start the Loki Mode server before using the extension:
-```bash
-loki start              # If using CLI
-# or
-./autonomy/run.sh       # If running from source
-```
-
-**Extension Features:**
-- Start/Stop/Pause/Resume sessions from the activity bar
-- Real-time task progress in the sidebar
-- Provider selection (Claude, Codex, Gemini)
-- Status bar showing current phase and progress
-- Quick actions menu (Cmd+Shift+L / Ctrl+Shift+L)
-
-[View on Marketplace](https://marketplace.visualstudio.com/items?itemName=asklokesh.loki-mode)
-
-See [Installation Guide](docs/INSTALLATION.md) for more details.
+Also available via **Homebrew**, **Docker**, **VS Code Extension**, and **direct shell script**. See the [Installation Guide](docs/INSTALLATION.md) for all 6 installation methods and detailed instructions.
 
 ### Multi-Provider Support (v5.0.0)
 
@@ -366,26 +310,7 @@ There is **NEVER** a "finished" state. After completing the PRD, Loki Mode:
 
 ## Quick Start
 
-### **1. Install**
-
-```bash
-# Option A: npm (recommended)
-npm install -g loki-mode
-
-# Option B: Homebrew (macOS/Linux)
-brew tap asklokesh/tap && brew install loki-mode
-loki-mode-install-skill  # Set up Claude Code integration
-
-# Option C: Docker
-docker pull asklokesh/loki-mode:5.25.0
-
-# Option D: Git clone
-git clone https://github.com/asklokesh/loki-mode.git ~/.claude/skills/loki-mode
-```
-
-See [Installation Guide](docs/INSTALLATION.md) for detailed instructions.
-
-### **2. Create a PRD**
+### **1. Write a PRD**
 
 ```markdown
 # Product: AI-Powered Todo App
@@ -409,38 +334,20 @@ Build a todo app with AI-powered task suggestions and deadline predictions.
 
 Save as `my-prd.md`.
 
-### **3. Run Loki Mode**
+### **2. Run It**
 
 ```bash
-# Using the CLI (v4.1.0)
 loki start ./my-prd.md
-
-# Or using run.sh directly
-./autonomy/run.sh ./my-prd.md
-
-# Or manual mode in Claude Code
-claude --dangerously-skip-permissions
-> Loki Mode with PRD at ./my-prd.md
 ```
 
-### **4. Monitor Progress**
+### **3. Monitor and Walk Away**
 
 ```bash
-# Check status
-loki status
-
-# Open dashboard in browser
-loki dashboard
-
-# Or watch terminal output
-watch -n 2 cat .loki/STATUS.txt
+loki status              # Check progress
+loki dashboard           # Open web dashboard
 ```
 
-### **5. Walk Away**
-
-Seriously. Go get coffee. It'll be deployed when you get back.
-
-**That's it.** No configuration. No manual steps. No intervention.
+Go get coffee. It'll be deployed when you get back.
 
 ---
 
@@ -507,56 +414,7 @@ Loki Mode has **41 predefined agent types** organized into **7 specialized swarm
 ### **Orchestration (4 types)**
 `orch-planner` `orch-sub-planner` `orch-judge` `orch-coordinator`
 
-<details>
-<summary><strong>View All 41 Agent Types with Capabilities</strong></summary>
-
-| Swarm | Agent | Capabilities |
-|-------|-------|--------------|
-| **Engineering** | `eng-frontend` | React/Vue/Svelte, TypeScript, Tailwind, accessibility, responsive design |
-| | `eng-backend` | Node/Python/Go, REST/GraphQL, auth, business logic, middleware |
-| | `eng-database` | PostgreSQL/MySQL/MongoDB, migrations, query optimization, indexing |
-| | `eng-mobile` | React Native/Flutter/Swift/Kotlin, offline-first, push notifications |
-| | `eng-api` | OpenAPI specs, SDK generation, versioning, webhooks, rate limiting |
-| | `eng-qa` | Unit/integration/E2E tests, coverage, automation, test data |
-| | `eng-perf` | Profiling, benchmarking, optimization, caching, load testing |
-| | `eng-infra` | Docker, K8s manifests, IaC, networking, security hardening |
-| **Operations** | `ops-devops` | CI/CD pipelines, GitHub Actions, GitLab CI, Jenkins |
-| | `ops-sre` | Reliability, SLOs/SLIs, capacity planning, runbooks |
-| | `ops-security` | SAST/DAST, pen testing, vulnerability management |
-| | `ops-monitor` | Observability, Datadog/Grafana, alerting, dashboards |
-| | `ops-incident` | Incident response, RCA, post-mortems, communication |
-| | `ops-release` | Versioning, changelogs, blue-green, canary, rollbacks |
-| | `ops-cost` | Cloud cost optimization, right-sizing, FinOps |
-| | `ops-compliance` | SOC2, GDPR, HIPAA, PCI-DSS, audit preparation |
-| **Business** | `biz-marketing` | Landing pages, SEO, content, email campaigns, social media |
-| | `biz-sales` | CRM setup, outreach, demos, proposals, pipeline |
-| | `biz-finance` | Billing (Stripe), invoicing, metrics, runway, pricing |
-| | `biz-legal` | ToS, privacy policy, contracts, IP protection |
-| | `biz-support` | Help docs, FAQs, ticket system, chatbot, knowledge base |
-| | `biz-hr` | Job posts, recruiting, onboarding, culture docs |
-| | `biz-investor` | Pitch decks, investor updates, data room, cap table |
-| | `biz-partnerships` | BD outreach, integrations, co-marketing, API partnerships |
-| **Data** | `data-ml` | Model training, MLOps, feature engineering, inference |
-| | `data-eng` | ETL pipelines, data warehousing, dbt, Airflow |
-| | `data-analytics` | Product analytics, A/B tests, dashboards, insights |
-| **Product** | `prod-pm` | Backlog grooming, prioritization, roadmap, specs |
-| | `prod-design` | Design system, Figma, UX patterns, prototypes |
-| | `prod-techwriter` | API docs, guides, tutorials, release notes |
-| **Growth** | `growth-hacker` | Growth experiments, viral loops, referral programs |
-| | `growth-community` | Community building, Discord/Slack, ambassador programs |
-| | `growth-success` | Customer success, health scoring, churn prevention |
-| | `growth-lifecycle` | Email lifecycle, in-app messaging, re-engagement |
-| **Review** | `review-code` | Code quality, design patterns, SOLID, maintainability |
-| | `review-business` | Requirements alignment, business logic, edge cases |
-| | `review-security` | Vulnerabilities, auth/authz, OWASP Top 10 |
-| **Orchestration** | `orch-planner` | Task decomposition, dependency analysis, work distribution |
-| | `orch-sub-planner` | Domain-specific planning, recursive task breakdown |
-| | `orch-judge` | Cycle continuation decisions, goal assessment, escalation |
-| | `orch-coordinator` | Cross-stream coordination, merge decisions, conflict resolution |
-
-</details>
-
-See [references/agent-types.md](references/agent-types.md) for complete agent type definitions.
+See [Agent Types](references/agent-types.md) for the full list of 41 specialized agents with detailed capabilities.
 
 ---
 
@@ -809,9 +667,19 @@ Run the comprehensive test suite:
 Contributions welcome! Please:
 1. Read [SKILL.md](SKILL.md) to understand the core architecture
 2. Review [skills/00-index.md](skills/00-index.md) for module organization (v3.0+)
-3. Check [references/agents.md](references/agents.md) for agent definitions
+3. Check [references/agent-types.md](references/agent-types.md) for agent definitions
 4. Open an issue for bugs or feature requests
 5. Submit PRs with clear descriptions and tests
+
+**Dev setup:**
+```bash
+git clone https://github.com/asklokesh/loki-mode.git && cd loki-mode
+npm install              # Install dependencies
+bash -n autonomy/run.sh  # Validate shell scripts
+cd dashboard-ui && npm ci && npm run build:all  # Build dashboard
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
 ---
 

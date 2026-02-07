@@ -25,6 +25,7 @@ Complete reference for all Loki Mode environment variables.
 | `LOKI_API_PORT` | `8420` | API server port |
 | `LOKI_API_HOST` | `localhost` | API server host |
 | `LOKI_API_TOKEN` | - | API authentication token |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated allowed CORS origins |
 
 ---
 
@@ -102,6 +103,31 @@ export LOKI_PHASE_E2E_TESTS=false
 **Example - Custom completion promise:**
 ```bash
 export LOKI_COMPLETION_PROMISE="ALL TESTS PASSING 100%"
+```
+
+---
+
+## Completion Council (v5.25.0)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOKI_COUNCIL_ENABLED` | `true` | Enable the 3-member completion council |
+| `LOKI_COUNCIL_SIZE` | `3` | Number of council members |
+| `LOKI_COUNCIL_THRESHOLD` | `2` | Votes needed for completion decision |
+| `LOKI_COUNCIL_CHECK_INTERVAL` | `5` | Check every N iterations |
+| `LOKI_COUNCIL_MIN_ITERATIONS` | `3` | Minimum iterations before council runs |
+| `LOKI_COUNCIL_CONVERGENCE_WINDOW` | `3` | Iterations to track for convergence |
+| `LOKI_COUNCIL_STAGNATION_LIMIT` | `5` | Max iterations with no git changes |
+
+**Example - Disable council:**
+```bash
+export LOKI_COUNCIL_ENABLED=false
+```
+
+**Example - More aggressive completion detection:**
+```bash
+export LOKI_COUNCIL_CHECK_INTERVAL=3
+export LOKI_COUNCIL_STAGNATION_LIMIT=3
 ```
 
 ---

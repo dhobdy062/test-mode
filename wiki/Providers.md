@@ -86,11 +86,15 @@ codex auth
 
 | Model | Context | Notes |
 |-------|---------|-------|
-| gpt-5.2-codex | 128K | Placeholder name |
+| gpt-5.3-codex | 128K | Official model for Codex CLI v0.98+ |
 
 ### Invocation
 
 ```bash
+# Recommended (v0.98.0+)
+codex --full-auto
+
+# Legacy
 codex exec --dangerously-bypass-approvals-and-sandbox
 ```
 
@@ -149,9 +153,10 @@ gemini auth
 ### Invocation
 
 ```bash
-# Note: -p flag is DEPRECATED
-# Use positional prompts instead
-gemini --yolo "Your prompt here"
+# Autonomous mode (verified v0.25.2)
+gemini --approval-mode=yolo "Your prompt here"
+
+# Note: -p flag is DEPRECATED - use positional prompts instead
 ```
 
 ### Limitations

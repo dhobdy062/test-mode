@@ -4,11 +4,11 @@
 
 | Metric | Auto-Claude | Loki Mode |
 |--------|-------------|-----------|
-| **GitHub Stars** | 9,594 | ~50 |
+| **GitHub Stars** | 11,479 | 594 |
 | **Release Type** | Desktop app (Electron) | CLI skill |
 | **License** | AGPL-3.0 | MIT |
 | **Requires** | Claude Pro/Max subscription | Claude API (any tier) |
-| **Version** | v2.7.5 (stable) | v4.1.0 |
+| **Version** | v2.7.5 (stable) | v5.25.0 |
 | **Created** | Dec 2025 | Jan 2026 |
 | **Community** | Discord, YouTube | GitHub only |
 
@@ -21,7 +21,7 @@ Auto-Claude provides a native Electron app with:
 - Real-time progress visualization
 - Point-and-click interface
 
-**Loki Mode:** CLI-only. Dashboard exists but is basic HTML polling.
+**Loki Mode:** CLI + web dashboard with dark Vercel/Linear theme, sidebar navigation, overview cards, Completion Council views. Dashboard served on port 57374.
 
 **Verdict: Auto-Claude wins** - GUI significantly lowers barrier to entry.
 
@@ -37,8 +37,8 @@ Auto-Claude provides:
 **Verdict: Auto-Claude wins** - Professional distribution.
 
 ### 3. Community and Adoption
-- Auto-Claude: 9,594 stars, Discord community, YouTube channel, active development
-- Loki Mode: ~50 stars, no community infrastructure
+- Auto-Claude: 11,479 stars, Discord community, YouTube channel, active development
+- Loki Mode: 594 stars, GitHub-only community, CONTRIBUTING.md + issue templates added
 
 **Verdict: Auto-Claude wins** - Network effects matter.
 
@@ -85,7 +85,7 @@ Loki Mode is built on peer-reviewed research:
 **Verdict: Loki Mode wins** - Academically grounded.
 
 ### 2. Specialized Agent Types
-Loki Mode has 37 predefined agent types across 6 swarms:
+Loki Mode has 41 predefined agent types across 6 swarms:
 - Engineering (8): frontend, backend, database, mobile, API, QA, perf, infra
 - Operations (8): DevOps, SRE, security, monitoring, incident, release, cost, compliance
 - Business (8): marketing, sales, finance, legal, support, HR, investor, partnerships
@@ -185,7 +185,7 @@ Loki Mode now incorporates proven patterns from Cursor's 100+ agent deployments:
 
 | Feature | Auto-Claude | Loki Mode |
 |---------|:-----------:|:---------:|
-| Desktop GUI | Yes | No |
+| Desktop GUI | Yes | Web Dashboard (dark theme) |
 | CLI Support | Yes | Yes |
 | Git Worktrees | Yes | Yes |
 | Parallel Agents | 12 terminals | 3-5 sessions |
@@ -194,10 +194,10 @@ Loki Mode now incorporates proven patterns from Cursor's 100+ agent deployments:
 | Linear Integration | Yes | No |
 | Auto-Updates | Yes | No |
 | Research Foundation | No | Yes |
-| Specialized Agents | 4 types | 37 types |
+| Specialized Agents | 4 types | 41 types |
 | Business Automation | No | Yes |
 | Anti-Sycophancy | No | Yes |
-| Quality Gates | 1 (QA loop) | 14 |
+| Quality Gates | 1 (QA loop) | 14 + Completion Council |
 | Published Benchmarks | No | Yes |
 | AI Merge Resolution | Yes | No |
 | Complexity Tiers | Yes | No |
@@ -248,7 +248,7 @@ Loki Mode now incorporates proven patterns from Cursor's 100+ agent deployments:
 **Loki Mode is better if you want:**
 - Research-backed architecture
 - Full startup automation (not just coding)
-- 37 specialized agents
+- 41 specialized agents
 - Anti-sycophancy measures
 - MIT license
 - No subscription requirement

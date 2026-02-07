@@ -100,7 +100,7 @@
 - Auto-merge completed features
 - Orchestrator state management
 
-### github-integration.md (v4.1.0)
+### github-integration.md
 **When:** Working with GitHub issues, creating PRs, syncing status
 - Import open issues as pending tasks
 - Create PRs on feature completion

@@ -23,7 +23,7 @@ fail() { ((TESTS_FAILED++)); echo "[FAIL] $1"; }
 # Setup test environment
 setup() {
     mkdir -p "$TEST_DIR/.loki/hooks" "$TEST_DIR/.loki/state" "$TEST_DIR/.claude"
-    cp -r "$PROJECT_ROOT/.loki/hooks/"*.sh "$TEST_DIR/.loki/hooks/" 2>/dev/null || true
+    cp -r "$PROJECT_ROOT/autonomy/hooks/"*.sh "$TEST_DIR/.loki/hooks/" 2>/dev/null || true
     chmod +x "$TEST_DIR/.loki/hooks/"*.sh 2>/dev/null || true
     cd "$TEST_DIR"
 }
@@ -31,7 +31,7 @@ setup() {
 # Test 1: session-init.sh exists and is executable
 test_session_init_exists() {
     log_test "session-init.sh exists and is executable"
-    if [ -x "$PROJECT_ROOT/.loki/hooks/session-init.sh" ]; then
+    if [ -x "$PROJECT_ROOT/autonomy/hooks/session-init.sh" ]; then
         pass "session-init.sh is executable"
     else
         fail "session-init.sh not found or not executable"
@@ -42,7 +42,7 @@ test_session_init_exists() {
 test_session_init_json() {
     log_test "session-init.sh returns valid JSON"
     INPUT='{"session_id":"test-123","cwd":"'"$TEST_DIR"'"}'
-    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/.loki/hooks/session-init.sh" 2>/dev/null)
+    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/autonomy/hooks/session-init.sh" 2>/dev/null)
     if echo "$OUTPUT" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
         pass "session-init.sh returns valid JSON"
     else
@@ -54,7 +54,7 @@ test_session_init_json() {
 test_validate_bash_blocks_dangerous() {
     log_test "validate-bash.sh blocks dangerous commands"
     INPUT='{"tool_input":{"command":"rm -rf /"},"cwd":"'"$TEST_DIR"'"}'
-    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/.loki/hooks/validate-bash.sh" 2>/dev/null)
+    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/autonomy/hooks/validate-bash.sh" 2>/dev/null)
     EXIT_CODE=$?
     if [ "$EXIT_CODE" -eq 2 ] && echo "$OUTPUT" | grep -q '"permissionDecision": "deny"'; then
         pass "validate-bash.sh blocks rm -rf /"
@@ -68,7 +68,7 @@ test_validate_bash_allows_safe() {
     log_test "validate-bash.sh allows safe commands"
     mkdir -p "$TEST_DIR/.loki/logs"
     INPUT='{"tool_input":{"command":"ls -la"},"cwd":"'"$TEST_DIR"'"}'
-    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/.loki/hooks/validate-bash.sh" 2>/dev/null)
+    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/autonomy/hooks/validate-bash.sh" 2>/dev/null)
     if echo "$OUTPUT" | grep -q '"permissionDecision": "allow"'; then
         pass "validate-bash.sh allows ls -la"
     else
@@ -81,7 +81,7 @@ test_validate_bash_audit_log() {
     log_test "validate-bash.sh creates audit log"
     mkdir -p "$TEST_DIR/.loki/logs"
     INPUT='{"tool_input":{"command":"echo test"},"cwd":"'"$TEST_DIR"'"}'
-    echo "$INPUT" | "$PROJECT_ROOT/.loki/hooks/validate-bash.sh" >/dev/null 2>&1
+    echo "$INPUT" | "$PROJECT_ROOT/autonomy/hooks/validate-bash.sh" >/dev/null 2>&1
     if [ -f "$TEST_DIR/.loki/logs/bash-audit.jsonl" ]; then
         pass "Audit log created"
     else
@@ -93,7 +93,7 @@ test_validate_bash_audit_log() {
 test_quality_gate_json() {
     log_test "quality-gate.sh returns valid JSON"
     INPUT='{"cwd":"'"$TEST_DIR"'"}'
-    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/.loki/hooks/quality-gate.sh" 2>/dev/null)
+    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/autonomy/hooks/quality-gate.sh" 2>/dev/null)
     if echo "$OUTPUT" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
         pass "quality-gate.sh returns valid JSON"
     else
@@ -106,7 +106,7 @@ test_track_metrics() {
     log_test "track-metrics.sh creates metrics file"
     mkdir -p "$TEST_DIR/.loki/metrics"
     INPUT='{"tool_name":"Bash","cwd":"'"$TEST_DIR"'"}'
-    echo "$INPUT" | "$PROJECT_ROOT/.loki/hooks/track-metrics.sh" >/dev/null 2>&1
+    echo "$INPUT" | "$PROJECT_ROOT/autonomy/hooks/track-metrics.sh" >/dev/null 2>&1
     if [ -f "$TEST_DIR/.loki/metrics/tool-usage.jsonl" ]; then
         pass "Metrics file created"
     else
@@ -155,7 +155,7 @@ with open('$PROJECT_ROOT/.claude/settings.json') as f:
 test_validate_bash_blocks_forkbomb() {
     log_test "validate-bash.sh blocks fork bomb"
     INPUT='{"tool_input":{"command":":(){ :|:& };:"},"cwd":"'"$TEST_DIR"'"}'
-    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/.loki/hooks/validate-bash.sh" 2>/dev/null)
+    OUTPUT=$(echo "$INPUT" | "$PROJECT_ROOT/autonomy/hooks/validate-bash.sh" 2>/dev/null)
     EXIT_CODE=$?
     if [ "$EXIT_CODE" -eq 2 ]; then
         pass "Fork bomb blocked"

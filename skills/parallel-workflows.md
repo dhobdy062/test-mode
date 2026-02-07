@@ -523,4 +523,4 @@ resource_limits:
 
 ---
 
-**v4.1.0 | Parallel Workflows Module**
+**v5.25.0 | Parallel Workflows Module**

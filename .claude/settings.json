@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.loki/hooks/session-init.sh",
+            "command": "${CLAUDE_PROJECT_DIR}/autonomy/hooks/session-init.sh",
             "timeout": 30,
             "statusMessage": "Initializing Loki Mode..."
           }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.loki/hooks/validate-bash.sh",
+            "command": "${CLAUDE_PROJECT_DIR}/autonomy/hooks/validate-bash.sh",
             "timeout": 10
           }
         ]
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.loki/hooks/track-metrics.sh",
+            "command": "${CLAUDE_PROJECT_DIR}/autonomy/hooks/track-metrics.sh",
             "async": true,
             "timeout": 5
           }
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.loki/hooks/quality-gate.sh",
+            "command": "${CLAUDE_PROJECT_DIR}/autonomy/hooks/quality-gate.sh",
             "timeout": 30
           }
         ]
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.loki/hooks/store-episode.sh",
+            "command": "${CLAUDE_PROJECT_DIR}/autonomy/hooks/store-episode.sh",
             "timeout": 60
           }
         ]

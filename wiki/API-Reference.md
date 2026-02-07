@@ -29,6 +29,7 @@ node autonomy/api-server.js --port 9898
 |---------------------|---------|-------------|
 | `LOKI_API_PORT` | 9898 | API server port |
 | `LOKI_DIR` | `.loki` | State directory |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated allowed CORS origins |
 
 ---
 
@@ -301,14 +302,171 @@ Clear learnings of a specific type.
 
 ---
 
+### Completion Council Endpoints
+
+#### `GET /api/council/state`
+Get current Completion Council state including whether the council is enabled, total votes cast, and recent verdicts.
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "total_votes": 6,
+  "verdicts": [
+    {
+      "iteration": 10,
+      "result": "continue",
+      "votes_complete": 1,
+      "votes_continue": 2,
+      "timestamp": "2026-02-02T12:00:00Z"
+    }
+  ]
+}
+```
+
+#### `GET /api/council/verdicts`
+Get council vote history (decision log).
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | number | 20 | Maximum verdicts to return |
+
+**Response:**
+```json
+{
+  "verdicts": [
+    {
+      "iteration": 10,
+      "result": "continue",
+      "votes_complete": 1,
+      "votes_continue": 2
+    }
+  ],
+  "details": []
+}
+```
+
+#### `GET /api/council/convergence`
+Get convergence tracking data for visualization. Tracks git diff hashes between iterations to detect stagnation.
+
+**Response:**
+```json
+{
+  "dataPoints": [
+    {
+      "iteration": 5,
+      "hash": "abc123",
+      "changed": true
+    }
+  ]
+}
+```
+
+#### `GET /api/council/report`
+Get the final council completion report (markdown format).
+
+**Response:**
+```json
+{
+  "report": "# Completion Council Report\n\n## Summary\n..."
+}
+```
+
+Returns `{"report": null}` if no report has been generated yet.
+
+#### `POST /api/council/force-review`
+Force an immediate council review by writing a signal file. The council will evaluate completion criteria on the next iteration.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Force review signal written"
+}
+```
+
+---
+
+### Agent Management Endpoints
+
+#### `GET /api/agents`
+Get all active and recent agents with their status and metadata.
+
+**Response:**
+```json
+[
+  {
+    "id": "agent-001",
+    "type": "development",
+    "status": "running",
+    "task": "implement-auth",
+    "pid": 12345,
+    "alive": true,
+    "started": "2026-02-02T12:00:00Z"
+  }
+]
+```
+
+#### `POST /api/agents/{agent_id}/kill`
+Kill a specific agent by ID. Sends SIGTERM to the agent process.
+
+**Path Parameters:**
+| Parameter | Description |
+|-----------|-------------|
+| `agent_id` | Agent identifier |
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Agent killed"
+}
+```
+
+#### `POST /api/agents/{agent_id}/pause`
+Pause a specific agent by writing a pause signal file.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Pause signal sent to agent agent-001"
+}
+```
+
+#### `POST /api/agents/{agent_id}/resume`
+Resume a paused agent by removing the pause signal file.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Resume signal sent to agent agent-001"
+}
+```
+
+---
+
 ## CORS
 
-All endpoints include CORS headers:
+All endpoints include CORS headers. By default, all origins are allowed:
 ```
 Access-Control-Allow-Origin: *
-Access-Control-Allow-Methods: GET, POST, OPTIONS
-Access-Control-Allow-Headers: Content-Type
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: *
 ```
+
+For production deployments, restrict CORS origins using the `CORS_ALLOWED_ORIGINS` environment variable:
+
+```bash
+# Allow specific origins (comma-separated)
+export CORS_ALLOWED_ORIGINS="https://myapp.example.com,https://dashboard.example.com"
+```
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated list of allowed CORS origins |
 
 ---
 

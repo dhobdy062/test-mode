@@ -42,6 +42,11 @@ docker-compose*.yml
 benchmarks/
 examples/
 
+# Large binary assets (excluded from docs/ allowlist)
+docs/*.gif
+docs/*.pptx
+docs/screenshots/
+
 # Dashboard frontend source (keep server.py only)
 dashboard/frontend/
 dashboard/.venv/

@@ -8,9 +8,11 @@ Guide for contributing to Loki Mode.
 
 ### Prerequisites
 
-- Node.js 16+
-- Git
-- Claude Code CLI (for testing)
+- **Bash 4+** (macOS ships with 3.x; install via `brew install bash`)
+- **Node.js 16+** (for dashboard frontend)
+- **Python 3.10+** (for dashboard backend and memory system)
+- **jq** (`brew install jq` or `apt-get install jq`)
+- **Git**
 
 ### Clone Repository
 
@@ -22,15 +24,19 @@ cd loki-mode
 ### Install Dependencies
 
 ```bash
-npm install
-npm link
+# Install dashboard frontend dependencies
+cd dashboard-ui && npm install && cd ..
+
+# Install dashboard backend dependencies (optional, for API development)
+pip install -r dashboard/requirements.txt
 ```
 
 ### Verify Setup
 
 ```bash
 loki --version
-./tests/run-all-tests.sh
+bash -n autonomy/run.sh
+bash -n autonomy/loki
 ```
 
 ---
@@ -43,35 +49,18 @@ loki-mode/
   VERSION                 # Version number
   CHANGELOG.md           # Release history
 
-  autonomy/              # Runtime components
-    run.sh               # Main orchestrator
-    notify.sh            # Notification system
-    api-server.js        # HTTP API server
-
-  providers/             # AI provider integrations
-    claude.sh
-    codex.sh
-    gemini.sh
-    loader.sh
-
-  skills/                # Modular skill documentation
-    00-index.md
-    model-selection.md
-    quality-gates.md
-    ...
-
+  autonomy/              # Runtime and CLI (run.sh, loki, completion-council.sh)
+  providers/             # Multi-provider support (Claude, Codex, Gemini)
+  skills/                # On-demand skill modules
   references/            # Detailed documentation
-    ...
-
+  memory/                # Memory system (Python)
+  dashboard/             # Dashboard backend (FastAPI)
+  dashboard-ui/          # Dashboard frontend (web components)
+  events/                # Event bus (Python, TypeScript, Bash)
+  tests/                 # Test suites
+  benchmarks/            # SWE-bench and HumanEval benchmarks
   wiki/                  # GitHub Wiki content
-    ...
-
-  tests/                 # Test scripts
-    run-all-tests.sh
-    test-*.sh
-
   vscode-extension/      # VS Code integration
-    ...
 ```
 
 ---
@@ -93,11 +82,15 @@ git checkout -b feature/my-feature
 ### Run Tests
 
 ```bash
-# Run all tests
-./tests/run-all-tests.sh
+# Shell syntax validation (required for all shell scripts)
+bash -n autonomy/run.sh
+bash -n autonomy/loki
 
-# Run specific test
-./tests/test-wrapper.sh
+# Shell unit tests
+bash tests/test-provider-loader.sh
+
+# Dashboard E2E tests (Playwright -- requires dashboard on port 57374)
+cd dashboard-ui && npx playwright test && cd ..
 ```
 
 ### Commit Changes
@@ -118,70 +111,66 @@ gh pr create
 
 ## Code Style
 
+- **No emojis.** Not in code, comments, commit messages, documentation, or UI text. This is a hard rule with zero exceptions.
+- **Follow existing patterns.** Look at surrounding code and match the style.
+- **Shell scripts** must pass `bash -n` syntax validation.
+- **Comments** should be minimal and meaningful -- explain *why*, not *what*.
+- **Commit messages** should be concise and use conventional prefixes: `fix:`, `update:`, `release:`, `refactor:`, `docs:`, `test:`.
+
 ### Shell Scripts
 
-- Use POSIX-compatible syntax when possible
-- Use `shellcheck` for linting
-- Add `set -euo pipefail` for error handling
 - Quote variables: `"$var"` not `$var`
+- Add `set -euo pipefail` for error handling
 
-### JavaScript
+### Python
+
+- Follow existing FastAPI patterns in `dashboard/server.py`
+- Type hints for function signatures
+
+### JavaScript / TypeScript
 
 - Node.js built-ins only (no npm dependencies for core)
 - ES6+ syntax
-- JSDoc comments for public functions
-
-### Markdown
-
-- Use consistent heading levels
-- Include code examples
-- Add "See Also" sections
-
-### Important Rules
-
-- **No emojis** - Never use emojis in code, documentation, or commits
-- **Keep it simple** - Don't over-engineer
-- **Test changes** - All changes should be tested
-- **Clean up** - Remove test files and kill test processes
 
 ---
 
 ## Testing
 
-### Running Tests
+### Test Categories
+
+| Category | Tool | Command |
+|----------|------|---------|
+| Shell syntax | `bash -n` | `bash -n autonomy/run.sh` |
+| Shell unit | bash | `bash tests/test-provider-loader.sh` |
+| Dashboard E2E | Playwright | `cd dashboard-ui && npx playwright test` |
+
+### Shell Syntax Validation
+
+All shell scripts must pass `bash -n` before submission:
 
 ```bash
-# All tests
-./tests/run-all-tests.sh
-
-# Individual tests
-./tests/test-wrapper.sh
-./tests/test-state-recovery.sh
-./tests/test-circuit-breaker.sh
-./tests/test-rate-limiting.sh
+bash -n autonomy/run.sh
+bash -n autonomy/loki
+bash -n autonomy/completion-council.sh
 ```
 
-### Writing Tests
-
-Create `tests/test-my-feature.sh`:
+### Shell Unit Tests
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/test-utils.sh"
-
-echo "Testing my feature..."
-
-# Test case 1
-assert_equals "expected" "$(my_function)"
-
-# Test case 2
-assert_file_exists "./expected-file.txt"
-
-echo "All tests passed!"
+# Provider loader tests (12 tests)
+bash tests/test-provider-loader.sh
 ```
+
+### Dashboard E2E Tests (Playwright)
+
+Requires the dashboard running on port 57374:
+
+```bash
+cd dashboard-ui
+npx playwright test
+```
+
+Currently 32 Playwright E2E tests covering API endpoints, sidebar navigation, task queue, logs, memory, learnings, council, and page integration.
 
 ---
 
@@ -253,11 +242,15 @@ Releases are handled by maintainers:
 
 ---
 
+## Reporting Issues
+
+Use the [issue templates](https://github.com/asklokesh/loki-mode/issues/new/choose) for bug reports and feature requests.
+
 ## Getting Help
 
 - **Questions**: Open a GitHub Discussion
-- **Bugs**: Open a GitHub Issue
-- **Features**: Open a GitHub Issue with `[Feature]` prefix
+- **Bugs**: File using the bug report issue template
+- **Features**: File using the feature request issue template
 
 ---
 

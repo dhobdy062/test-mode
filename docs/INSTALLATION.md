@@ -19,6 +19,7 @@ Complete installation instructions for all platforms and use cases.
 - [Claude.ai (Web)](#claudeai-web)
 - [Anthropic API Console](#anthropic-api-console)
 - [Verify Installation](#verify-installation)
+- [Ports](#ports)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -568,6 +569,45 @@ loki-mode/
 ```
 
 **Note:** Some files/directories (autonomy, tests, examples) are only available with full installation (Options A or B).
+
+---
+
+## Ports
+
+Loki Mode uses two network ports for different services:
+
+| Port | Service | Description |
+|------|---------|-------------|
+| **57374** | Dashboard (FastAPI) | Web dashboard UI with real-time monitoring, task board, Completion Council views, memory browser, and log streaming. Served by `dashboard/server.py`. |
+| **9898** | REST API Server | JSON API used by the VS Code extension, CLI tools, and programmatic access. Serves endpoints like `/api/status`, `/api/tasks`, `/api/memory`, etc. |
+
+### When to Use Which Port
+
+- **Browser access** (dashboard, monitoring): Use port **57374** -- `http://localhost:57374`
+- **API calls** (REST, programmatic): Use port **9898** -- `http://localhost:9898`
+- **VS Code extension**: Connects to API on port **9898** automatically (configurable via `loki.apiPort` setting)
+- **Both ports** are started automatically when you run `loki start` or `./autonomy/run.sh`. No manual configuration is needed.
+
+### Port Configuration
+
+```bash
+# Dashboard port (default: 57374)
+LOKI_DASHBOARD_PORT=57374 loki dashboard start
+
+# API port (default: 9898)
+loki serve --port 9898
+```
+
+### CORS Configuration
+
+For remote or cross-origin access to the dashboard, configure allowed origins via the `CORS_ALLOWED_ORIGINS` environment variable:
+
+```bash
+# Allow specific origins
+CORS_ALLOWED_ORIGINS="http://localhost:3000,https://my-dashboard.example.com" loki dashboard start
+
+# Default: localhost only (secure by default)
+```
 
 ---
 

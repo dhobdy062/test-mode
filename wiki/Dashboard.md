@@ -6,12 +6,15 @@ Web-based dashboard for monitoring and managing Loki Mode sessions.
 
 ## Overview
 
-The Loki Mode dashboard provides:
+The Loki Mode dashboard features a dark Vercel/Linear-inspired design with purple accents and provides:
 
-- Real-time session monitoring
+- Real-time session monitoring with overview cards
+- Sidebar navigation for all views
 - Kanban-style task management
-- Project registry
+- Completion Council monitoring (votes, convergence, decision log)
 - Cross-project learnings view
+- Log streaming with filtering
+- Agent management (pause, resume, kill)
 
 ---
 
@@ -32,54 +35,65 @@ Default URL: `http://localhost:57374`
 
 ---
 
+## Design
+
+The dashboard uses a dark theme inspired by Vercel and Linear:
+
+- Dark background (`#0a0a0b`) with subtle borders (`#1a1a2e`)
+- Purple accent color (`#7c3aed`) for active states and highlights
+- Sidebar navigation on the left for all views
+- Overview cards at the top showing session state, phase, iteration count, and agent status
+- Responsive layout that works on desktop and tablet screens
+
+---
+
 ## Dashboard Views
 
-### Session Monitor
+### Overview
 
-Real-time view of the current session:
+Top-level overview with status cards:
 
-| Element | Description |
-|---------|-------------|
-| Status indicator | Running, paused, stopped |
-| Current phase | SDLC phase being executed |
-| Task queue | Pending and completed tasks |
-| Agent activity | Active agent count and types |
-| Log stream | Live log output |
+| Card | Description |
+|------|-------------|
+| Session Status | Running, paused, stopped with color indicator |
+| Current Phase | Active SDLC phase |
+| Iteration | Current iteration number |
+| Agents | Active agent count |
 
-### Kanban Board
+### Task Queue
 
-Drag-and-drop task management:
+Visual task management:
 
 | Column | Description |
 |--------|-------------|
-| Backlog | Unstarted tasks |
+| Pending | Tasks waiting to execute |
 | In Progress | Active tasks |
-| Review | Tasks awaiting review |
 | Done | Completed tasks |
 
-**Keyboard shortcuts:**
-- `j/k` - Navigate tasks
-- `Enter` - Edit task
-- `d` - Delete task
-- `m` - Move to next column
+### Logs
 
-### Project Registry
+Real-time log streaming with filtering options.
 
-Manage multiple projects:
-
-- View all registered projects
-- Check project health
-- Sync project data
-- Auto-discover projects
-
-### Learnings View
+### Memory / Learnings
 
 Browse cross-project learnings:
 
 - Filter by type (patterns, mistakes, successes)
 - Search learnings
 - View statistics
-- Export/import learnings
+
+### Completion Council
+
+Council monitoring with four tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **Overview** | Current council state, enabled status, vote counts |
+| **Decision Log** | History of council verdicts (continue vs. complete) |
+| **Convergence** | Git diff hash tracking chart showing progress stagnation |
+| **Agents** | Active agent list with pause/resume/kill controls |
+
+The council uses a 3-member voting system with 2/3 majority required for completion decisions. When all members vote unanimously, an anti-sycophancy devil's advocate review is triggered to confirm the decision.
 
 ---
 
@@ -144,7 +158,6 @@ dashboard:
   port: 57374
   host: localhost
   auto_open: false
-  theme: dark
 ```
 
 ### Environment Variables

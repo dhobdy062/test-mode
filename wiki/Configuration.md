@@ -166,6 +166,26 @@ completion:
   # Ignore ALL completion signals
   perpetual_mode: false
 
+  # Completion Council settings (v5.25.0)
+  council:
+    # Enable the 3-member completion council
+    enabled: true
+
+    # Number of council members
+    size: 3
+
+    # Votes needed for completion decision
+    threshold: 2
+
+    # Check every N iterations
+    check_interval: 5
+
+    # Minimum iterations before council activates
+    min_iterations: 3
+
+    # Max iterations with no git changes before force-stop
+    stagnation_limit: 5
+
 #-------------------------------------------------------------------------------
 # Model Selection & Routing
 #-------------------------------------------------------------------------------
@@ -396,6 +416,16 @@ LOKI_API_TOKEN=secret_token
 source .env
 loki start ./prd.md
 ```
+
+### CORS Configuration
+
+For production deployments, restrict CORS origins:
+
+```bash
+export CORS_ALLOWED_ORIGINS="https://dashboard.example.com"
+```
+
+When not set, defaults to `*` (all origins). See [[Security]] for details.
 
 ### Symlink Protection
 

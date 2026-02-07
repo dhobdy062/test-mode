@@ -1,6 +1,6 @@
 # Multi-Provider Architecture Reference
 
-> **Version:** 5.23.0 | **Status:** Production | **Last Updated:** 2026-02-05
+> **Version:** 5.25.0 | **Status:** Production | **Last Updated:** 2026-02-06
 
 Loki Mode supports three AI CLI providers with a unified abstraction layer. This document provides detailed technical reference for the multi-provider system.
 

@@ -118,6 +118,18 @@ get_version() {
     fi
 }
 
+# Check if jq is available (called by functions that need it)
+require_jq() {
+    if ! command -v jq &> /dev/null; then
+        echo -e "${RED}Error: jq is required but not installed.${NC}"
+        echo "Install with:"
+        echo "  brew install jq    (macOS)"
+        echo "  apt install jq     (Debian/Ubuntu)"
+        echo "  yum install jq     (RHEL/CentOS)"
+        exit 1
+    fi
+}
+
 # Emit event (non-blocking)
 # Usage: emit_event <type> <source> <action> [key=value ...]
 emit_event() {
@@ -166,6 +178,12 @@ load_memory_context() {
 
     # Skip if explicitly disabled
     if [[ "${LOKI_SKIP_MEMORY:-}" == "true" ]]; then
+        return 0
+    fi
+
+    # Check if python3 is available (required for memory system)
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${YELLOW}Warning: python3 not found - memory context loading disabled${NC}" >&2
         return 0
     fi
 
@@ -716,10 +734,20 @@ cmd_resume() {
 
 # Show current status
 cmd_status() {
+    require_jq
+
     if [ ! -d "$LOKI_DIR" ]; then
-        echo -e "${YELLOW}No .loki directory found.${NC}"
+        echo -e "${BOLD}Loki Mode Status${NC}"
+        echo ""
+        echo -e "${YELLOW}No active session found.${NC}"
         echo "Loki Mode has not been initialized in this directory."
-        exit 0
+        echo ""
+        echo "To start a session:"
+        echo "  loki start <prd>              - Start with a PRD file"
+        echo "  loki start                    - Start without a PRD"
+        echo ""
+        echo -e "${DIM}Current directory: $(pwd)${NC}"
+        return 0
     fi
 
     echo -e "${BOLD}Loki Mode Status${NC}"
@@ -1570,6 +1598,8 @@ cmd_issue_parse() {
 
 # View parsed GitHub issue details
 cmd_issue_view() {
+    require_jq
+
     local issue_ref="${1:-}"
 
     # Handle --help flag
@@ -1678,6 +1708,8 @@ cmd_issue_view() {
 
 # Generate PRD from GitHub issue
 cmd_issue() {
+    require_jq
+
     local issue_ref=""
     local repo=""
     local number=""
@@ -2813,6 +2845,8 @@ main() {
 
 # Reset session state
 cmd_reset() {
+    require_jq
+
     local subcommand="${1:-all}"
 
     case "$subcommand" in

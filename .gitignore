@@ -24,21 +24,12 @@ the_app/
 wiki-repo/
 
 # Runtime state (regenerated each session)
-.loki/CONTINUITY.md
-.loki/STATUS.txt
-.loki/*.pid
-.loki/autonomy-state.json
-.loki/dashboard-state.json
-.loki/logs/
-.loki/queue/
-.loki/state/
-.loki/memory/
-.loki/events/pending/
-.loki/events/archive/
-.loki/PAUSE
-.loki/PAUSED.md
-.loki/SKILL.md
-.loki/generated-prd.md
-.loki/competitive-analysis-checklist.md
-.loki/dashboard/
-.loki/skills/
+# Source hooks live in autonomy/hooks/ (tracked)
+.loki/
+
+# Runtime state in subdirectories
+dashboard-ui/.loki/
+vscode-extension/.loki/
+
+# Test artifacts
+**/test-results/

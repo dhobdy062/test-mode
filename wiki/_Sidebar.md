@@ -17,6 +17,7 @@
 - [[Providers]]
 - [[Notifications]]
 - [[Dashboard]]
+- [[Completion Council]]
 - [[Cross-Project Learning]]
 - [[GitHub Integration]]
 

@@ -1,6 +1,6 @@
-# Loki Mode Dashboard v4.1.0
+# Loki Mode Dashboard v5.25.0
 
-A production-ready realtime dashboard for monitoring and managing Loki Mode autonomous operations.
+A production-ready realtime dashboard for monitoring and managing Loki Mode autonomous operations. Features a dark Vercel/Linear-inspired theme with purple accents, sidebar navigation, and overview cards.
 
 ## Overview
 
@@ -8,21 +8,23 @@ The Loki Mode Dashboard provides a visual interface to:
 - Monitor task progress across Kanban columns
 - Track active agents and their status
 - View system health (RARV cycle, memory, quality gates)
+- View Completion Council verdicts and convergence status
 - Manage human intervention (pause/stop)
 - Add and organize local tasks
 
 ## Quick Start
 
 ```bash
-# Start local dashboard server
-cd autonomy/.loki
-python3 -m http.server 8080
+# Start the dashboard (default port: 57374)
+loki dashboard start
 
 # Open in browser
-open http://localhost:8080/dashboard/index.html
+open http://localhost:57374
 ```
 
 The dashboard automatically syncs with Loki Mode when it's running, polling `dashboard-state.json` every 2 seconds.
+
+**Ports:** The dashboard runs on port **57374**. The REST API server runs separately on port **9898**. See [INSTALLATION.md](INSTALLATION.md#ports) for details.
 
 ---
 
@@ -33,11 +35,12 @@ The dashboard automatically syncs with Loki Mode when it's running, polling `das
 The sidebar provides navigation and system status at a glance.
 
 #### Logo & Version
-- Loki Mode branding with current version (v4.1.0)
+- Loki Mode branding with current version (v5.25.0)
 - Version updates automatically from server state
 
 #### Theme Toggle
-- Switch between light mode (Anthropic cream: #faf9f0) and dark mode (#131314)
+- Dark Vercel/Linear theme with purple accents (default)
+- Switch between dark mode and light mode
 - Preference saved to localStorage
 - Respects system preference on first visit
 
@@ -165,26 +168,26 @@ Status icons:
 
 ## Design System
 
-### Anthropic Design Language
+### Dark Vercel/Linear Design Language
 
-The dashboard follows Anthropic's design language:
+The dashboard follows a dark Vercel/Linear-inspired design with purple accents:
 
-**Light Mode (Default)**:
+**Dark Mode (Default)**:
+```css
+--bg-primary: #0a0a0b;    /* Deep dark background */
+--bg-secondary: #141416;  /* Card surfaces */
+--bg-card: #1a1a1d;       /* Elevated surfaces */
+--accent: #8b5cf6;        /* Purple accent */
+--text-primary: #f5f5f5;  /* Near white text */
+```
+
+**Light Mode**:
 ```css
 --bg-primary: #faf9f0;    /* Cream background */
 --bg-secondary: #f5f4eb;  /* Sidebar/cards */
 --bg-card: #ffffff;       /* Card background */
---accent: #d97757;        /* Terracotta accent */
+--accent: #7c3aed;        /* Purple accent */
 --text-primary: #1a1a1a;  /* Near black text */
-```
-
-**Dark Mode**:
-```css
---bg-primary: #131314;    /* Deep dark */
---bg-secondary: #1a1a1b;  /* Card surfaces */
---bg-card: #1e1e20;       /* Elevated surfaces */
---accent: #d97757;        /* Same terracotta */
---text-primary: #f5f5f5;  /* Near white text */
 ```
 
 ### Typography
@@ -198,6 +201,60 @@ The dashboard follows Anthropic's design language:
 | Warning | #ca8a04 | #eab308 |
 | Error | #dc2626 | #ef4444 |
 | Info | #2563eb | #3b82f6 |
+
+---
+
+### 6. Completion Council (v5.25.0)
+
+The Completion Council panel provides visibility into the multi-agent definition-of-done system:
+
+#### Overview Tab
+- Current council state (active, idle, reviewing)
+- Latest verdict (CONTINUE, COMPLETE, FORCE_STOP)
+- Vote tally from 3 council members (2/3 majority required)
+
+#### Decision Log Tab
+- Chronological history of all council verdicts
+- Per-member vote breakdown
+- Anti-sycophancy devil's advocate triggers (shown when unanimous approval occurs)
+
+#### Convergence Tab
+- Git diff hash tracking between iterations
+- Convergence detection (repeated identical diffs = no progress)
+- Circuit breaker status (triggers after 5 consecutive no-progress iterations)
+
+#### Agents Tab
+- Council member status and assignment
+- Current review focus areas
+
+**API Endpoints:**
+- `GET /api/council/state` - Current council state
+- `GET /api/council/verdicts` - Decision history
+- `GET /api/council/convergence` - Convergence metrics
+- `POST /api/council/force-review` - Trigger manual review
+
+**CLI Commands:**
+```bash
+loki council status         # Current state
+loki council verdicts       # Decision history
+loki council convergence    # Convergence data
+loki council force-review   # Trigger review
+loki council report         # Generate report
+```
+
+---
+
+## Security Hardening (v5.25.0)
+
+The dashboard includes several security measures:
+
+| Fix | Description |
+|-----|-------------|
+| **Path traversal prevention** | `storage.py` validates all file paths to prevent directory traversal attacks |
+| **XSS protection** | Log stream output is sanitized to prevent cross-site scripting |
+| **Memory leak fix** | Session control properly cleans up resources on disconnect |
+| **Python injection fix** | `completion-council.sh` sanitizes inputs to prevent code injection |
+| **CORS configuration** | Configurable via `CORS_ALLOWED_ORIGINS` environment variable (default: localhost only) |
 
 ---
 
@@ -220,7 +277,7 @@ dashboard-state.json       fetch() + render
 ```json
 {
   "timestamp": "2026-01-21T10:30:00Z",
-  "version": "4.1.0",
+  "version": "5.25.0",
   "mode": "autonomous",
   "phase": "DEVELOPMENT",
   "complexity": "standard",
@@ -341,6 +398,8 @@ Useful for:
 
 | Version | Changes |
 |---------|---------|
+| v5.25.0 | Completion Council panel, dark Vercel/Linear theme with purple accents, enterprise security hardening |
+| v5.23.0 | Dashboard reads from .loki/ flat files, all web components functional |
 | v4.1.0 | Terminal output, quick actions, GitHub import modal, config file support |
 | v4.0.0 | Complete rewrite with Anthropic design, realtime sync, mobile support |
 | v3.x | Basic status display (no interactivity) |
@@ -350,6 +409,6 @@ Useful for:
 ## Related Documentation
 
 - [Core Workflow](../references/core-workflow.md) - RARV cycle details
-- [Agent Types](../references/agent-types.md) - 37 agent definitions
+- [Agent Types](../references/agent-types.md) - 41 agent definitions
 - [Quality Control](../references/quality-control.md) - Quality gates system
 - [Memory System](../references/memory-system.md) - Memory architecture

@@ -72,7 +72,7 @@ loki memory index
 loki memory retrieve "authentication"
 
 # Manage API server (enables VS Code, dashboard)
-loki serve --port 8420
+loki serve --port 9898
 loki api start
 
 # View dashboard (web UI)
@@ -237,7 +237,7 @@ Tool Action -> Memory Store -> Pattern Consolidation -> Tool Query
 | `.loki/config/` | Provider settings | CLI, run.sh |
 | `vscode-extension/package.json` | Extension settings | VS Code |
 
-## Future Synergy (v5.18+)
+## Future Synergy (v5.26+)
 
 Per SYNERGY-ROADMAP.md:
 
@@ -248,5 +248,5 @@ Per SYNERGY-ROADMAP.md:
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2026-02-03*
+*Document Version: 1.1*
+*Last Updated: 2026-02-06*

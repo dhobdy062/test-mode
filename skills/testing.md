@@ -63,7 +63,7 @@ property_based_testing:
 
 ```yaml
 hooks_system:
-  location: ".loki/hooks/"
+  location: "autonomy/hooks/"
 
   triggers:
     on_file_write:

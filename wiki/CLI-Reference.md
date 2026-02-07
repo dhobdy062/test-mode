@@ -489,6 +489,45 @@ loki enterprise audit summary
 
 ---
 
+## Completion Council Commands
+
+### `loki council`
+
+Manage the Completion Council (v5.25.0).
+
+```bash
+loki council [SUBCOMMAND]
+```
+
+**Subcommands:**
+
+| Command | Description |
+|---------|-------------|
+| `status` | Show current council state and vote summary |
+| `verdicts` | Display decision log (vote history) |
+| `convergence` | Show convergence tracking data |
+| `force-review` | Force an immediate council review |
+| `report` | Display the final completion report |
+| `config` | Show council configuration |
+| `help` | Show council help |
+
+**Examples:**
+```bash
+# Check council status
+loki council status
+
+# View vote history
+loki council verdicts
+
+# Force immediate review
+loki council force-review
+
+# View completion report
+loki council report
+```
+
+---
+
 ## Configuration Commands
 
 ### `loki config`

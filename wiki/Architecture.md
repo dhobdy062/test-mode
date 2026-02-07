@@ -384,4 +384,61 @@ Audit: ~/.loki/dashboard/audit/*.jsonl
 
 ---
 
+## Completion Council (v5.25.0)
+
+```
+                         +----------------+
+                         |   ITERATION N  |
+                         +-------+--------+
+                                 |
+                                 | Every COUNCIL_CHECK_INTERVAL iterations
+                                 v
+                         +-------+--------+
+                         | COUNCIL CHECK  |
+                         +-------+--------+
+                                 |
+         +-----------------------+-----------------------+
+         |                       |                       |
+         v                       v                       v
++--------+--------+    +--------+--------+    +--------+--------+
+|   MEMBER 1      |    |   MEMBER 2      |    |   MEMBER 3      |
+|   Vote: Y/N     |    |   Vote: Y/N     |    |   Vote: Y/N     |
++-----------------+    +-----------------+    +-----------------+
+         |                       |                       |
+         +-----------+-----------+-----------+-----------+
+                     |
+                     v
+              +------+------+
+              |  TALLY VOTES|
+              +------+------+
+                     |
+         +-----------+-----------+
+         |                       |
+         v                       v
+  +------+------+         +------+------+
+  |  >= 2/3     |         |  < 2/3      |
+  |  COMPLETE?  |         |  CONTINUE   |
+  +------+------+         +-------------+
+         |
+         | Unanimous?
+         v
+  +------+------+
+  | DEVIL'S     |
+  | ADVOCATE    |  (Anti-sycophancy check)
+  +------+------+
+         |
+    +----+----+
+    |         |
+    v         v
+ CONFIRM    REJECT
+ COMPLETE   CONTINUE
+
+State: .loki/council/state.json
+Votes: .loki/council/votes/
+Report: .loki/council/report.md
+Convergence: .loki/council/convergence.log
+```
+
+---
+
 *These diagrams are auto-generated and updated with each release.*

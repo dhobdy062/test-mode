@@ -122,7 +122,7 @@ BOOTSTRAP -> DISCOVERY -> ARCHITECTURE -> INFRASTRUCTURE
      -> DEVELOPMENT -> QA -> DEPLOYMENT -> GROWTH (continuous)
 ```
 
-**37 Specialized Agent Types across 7 swarms:**
+**41 Specialized Agent Types across 7 swarms:**
 - Engineering (8 types)
 - Operations (8 types)
 - Business (8 types)
@@ -174,7 +174,7 @@ Cursor learned through failure:
 ### 3. Simplicity Principle
 > "A surprising amount of the system's behavior comes down to how we prompt the agents. The harness and models matter, but the prompts matter more."
 
-**Loki Mode:** More complex infrastructure (7 gates, 37 agent types, memory systems). May be over-engineered for some use cases.
+**Loki Mode:** More complex infrastructure (7 gates, 41 agent types, memory systems). May be over-engineered for some use cases.
 
 ---
 
@@ -222,4 +222,4 @@ We incorporated Cursor's proven patterns:
 
 ---
 
-**Loki Mode v4.1.0** | github.com/asklokesh/loki-mode
+**Loki Mode v5.25.0** | github.com/asklokesh/loki-mode

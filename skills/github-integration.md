@@ -1,4 +1,4 @@
-# GitHub Integration (v4.1.0)
+# GitHub Integration (v5.25.0)
 
 **When:** Importing issues from GitHub, creating PRs, syncing task status
 
@@ -96,7 +96,7 @@ gh pr create \
 ```markdown
 ## Summary
 
-Automated implementation by Loki Mode v4.1.0
+Automated implementation by Loki Mode v5.25.0
 
 ### Tasks Completed
 - [x] Task 1: Description
@@ -215,4 +215,4 @@ gh repo set-default owner/repo
 
 ---
 
-**v4.1.0 | GitHub Integration | ~100 lines**
+**v5.25.0 | GitHub Integration | ~100 lines**

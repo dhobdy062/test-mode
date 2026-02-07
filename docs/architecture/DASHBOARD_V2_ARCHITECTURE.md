@@ -492,7 +492,7 @@ loki dashboard status             # Show dashboard status
 loki dashboard open               # Open in browser
 
 # With options
-loki dashboard start --port 8080  # Custom port
+loki dashboard start --port 57374  # Custom port
 loki dashboard start --host 0.0.0.0  # Allow remote access
 loki dashboard start --db postgresql://...  # Use PostgreSQL
 
@@ -523,7 +523,7 @@ def dashboard():
     pass
 
 @dashboard.command()
-@click.option('--port', default=8080, help='Port to listen on')
+@click.option('--port', default=57374, help='Port to listen on')
 @click.option('--host', default='127.0.0.1', help='Host to bind to')
 @click.option('--db', default=None, help='Database URL')
 @click.option('--foreground', '-f', is_flag=True, help='Run in foreground')
@@ -698,24 +698,24 @@ class CLIBridge:
 ```
 loki dashboard start
   |
-  +-- uvicorn (FastAPI) on localhost:8080
+  +-- uvicorn (FastAPI) on localhost:57374
   |     |
   |     +-- SQLite: ~/.loki/dashboard.db
   |     |
   |     +-- File watchers for registered projects
   |
-  +-- Opens browser to http://localhost:8080
+  +-- Opens browser to http://localhost:57374
 ```
 
 ### 8.2 Standalone Server Mode
 
 ```bash
 # Run dashboard server for team access
-loki dashboard start --host 0.0.0.0 --port 8080 --db postgresql://user:pass@host/loki
+loki dashboard start --host 0.0.0.0 --port 57374 --db postgresql://user:pass@host/loki
 
 # Or via Docker
 docker run -d \
-  -p 8080:8080 \
+  -p 57374:57374 \
   -v ~/.loki:/root/.loki \
   -e LOKI_DATABASE_URL=postgresql://... \
   asklokesh/loki-dashboard
@@ -730,7 +730,7 @@ services:
   dashboard:
     image: asklokesh/loki-dashboard:latest
     ports:
-      - "8080:8080"
+      - "57374:57374"
     environment:
       - LOKI_DATABASE_URL=postgresql://postgres:postgres@db/loki
       - LOKI_DASHBOARD_HOST=0.0.0.0

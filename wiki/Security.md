@@ -15,6 +15,31 @@ Loki Mode is designed with security in mind:
 
 ---
 
+## Security Hardening (v5.25.0)
+
+The following security fixes were applied in v5.25.0:
+
+| Vulnerability | Fix | Details |
+|---------------|-----|---------|
+| **Path Traversal** | Input sanitization | API endpoints now validate and reject path components containing `..` or absolute paths to prevent directory traversal attacks |
+| **Cross-Site Scripting (XSS)** | Output encoding | Dashboard frontend escapes all user-supplied content before rendering into the DOM |
+| **Python Code Injection** | Input validation | Server-side endpoints that accept user input validate against injection patterns before processing |
+| **Memory Leak** | Resource cleanup | Fixed a memory leak in the SSE (Server-Sent Events) endpoint where client disconnections were not properly releasing resources |
+| **Signal Blocking** | Signal handler hardening | Signal handlers (SIGTERM, SIGINT) are now properly configured to prevent signal blocking during critical shutdown operations |
+| **Unrestricted CORS** | Configurable origins | CORS is now configurable via the `CORS_ALLOWED_ORIGINS` environment variable instead of allowing all origins by default in production |
+
+### Configuring CORS
+
+For production deployments, restrict CORS to specific origins:
+
+```bash
+export CORS_ALLOWED_ORIGINS="https://dashboard.example.com,https://app.example.com"
+```
+
+When not set, the default is `*` (all origins allowed), which is appropriate for local development only.
+
+---
+
 ## Data Privacy
 
 ### What Gets Sent to AI Providers

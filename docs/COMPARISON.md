@@ -24,7 +24,7 @@
 
 | Feature | **Loki Mode** | **Devin** | **Codex** | **Cursor** | **Kiro** | **Antigravity** | **Amazon Q** | **OpenCode** |
 |---------|--------------|-----------|-----------|------------|----------|-----------------|--------------|--------------|
-| **Multi-Agent** | 37 agents in 7 swarms | Single | Single | Up to 8 parallel | Background | Manager Surface | Multiple types | 4 built-in |
+| **Multi-Agent** | 41 agents in 7 swarms | Single | Single | Up to 8 parallel | Background | Manager Surface | Multiple types | 4 built-in |
 | **Orchestration** | Full orchestrator | N/A | N/A | Git worktree | Hooks | Manager view | Workflow | Subagents |
 | **Parallel Exec** | 10+ Haiku, 4 impl (worktree) | No | No | 8 max | Yes | Yes | Yes | Yes |
 | **Agent Swarms** | Eng, Ops, Business, Data, Product, Growth, Review | N/A | N/A | N/A | N/A | N/A | 3 types | N/A |
@@ -151,7 +151,7 @@
 | **Multi-Agent Verification** | Model diversity (Claude vs OpenAI, 54% improvement) | 3 blind reviewers + devil's advocate | Different approach (N/A for Claude Code - only Claude models) |
 | **Quality Gates** | Built-in verification loops | 7 explicit gates + anti-sycophancy | **Loki Mode** |
 | **Memory System** | Not documented | 3-tier episodic/semantic/procedural | **Loki Mode** |
-| **Agent Specialization** | Custom Zen Agents | 37 pre-defined specialized agents | **Loki Mode** |
+| **Agent Specialization** | Custom Zen Agents | 41 pre-defined specialized agents | **Loki Mode** |
 | **CI Failure Analysis** | Explicit pattern with auto-fix | DevOps agent only | **ADOPTED from Zencoder** |
 | **Review Comment Resolution** | Auto-apply simple changes | Manual review | **ADOPTED from Zencoder** |
 | **Dependency Management** | Scheduled PRs, one group at a time | Mentioned only | **ADOPTED from Zencoder** |
@@ -180,7 +180,7 @@
 
 1. **Quality Control**: 7 explicit gates + blind review + devil's advocate vs built-in loops
 2. **Memory System**: 3-tier (episodic/semantic/procedural) with cross-project learning
-3. **Agent Specialization**: 37 pre-defined specialized agents across 7 swarms
+3. **Agent Specialization**: 41 pre-defined specialized agents across 7 swarms
 4. **Anti-Sycophancy**: CONSENSAGENT patterns prevent reviewer groupthink
 5. **Autonomy Design**: Zero human intervention from PRD to production
 6. **Research Foundation**: 10+ academic papers integrated vs proprietary
@@ -193,20 +193,23 @@
 
 ---
 
-## Open Source Claude Code Skills Comparison (v2.36.9)
+## Open Source Claude Code Skills Comparison (Updated 2026-02-06)
 
-**Comprehensive analysis of 8 leading open-source Claude Code skills/extensions. Honest assessment of what Loki Mode lacks and does well.**
+**Comprehensive analysis of leading open-source Claude Code skills/extensions. Honest assessment of what Loki Mode lacks and does well.**
 
 ### Feature Comparison
 
-| Feature | **Loki Mode** | **Superpowers** | **agents** | **claude-flow** | **oh-my-claudecode** | **claude-mem** |
-|---------|--------------|-----------------|------------|-----------------|---------------------|----------------|
-| **Stars** | 500+ | 35K+ | 26K+ | 12K+ | N/A | N/A |
-| **Agents** | 37 in 7 swarms | Fresh per task | 108 agents | Swarm-based | 32 agents | N/A |
-| **Skills** | Progressive disclosure | N/A | 129 skills | N/A | 35 skills | Memory focus |
-| **Multi-Provider** | Yes (Claude/Codex/Gemini) | No | No | No | No | No |
-| **Memory System** | 3-tier (episodic/semantic/procedural) | N/A | N/A | Hybrid | N/A | SQLite+FTS5 |
-| **Quality Gates** | 7 gates | Two-Stage Review | N/A | Consensus | Tiered | N/A |
+| Feature | **Loki Mode** | **GSD** | **Superpowers** | **agents** | **claude-flow** | **oh-my-claudecode** | **claude-mem** |
+|---------|--------------|---------|-----------------|------------|-----------------|---------------------|----------------|
+| **Stars** | 594 | 11,903 | 35K+ | 26K+ | 13.7K | N/A | N/A |
+| **npm/wk** | 6.1K | 21.4K | N/A | N/A | N/A | N/A | N/A |
+| **Agents** | 41 in 7 swarms | 11 agents | Fresh per task | 108 agents | Swarm-based | 32 agents | N/A |
+| **Skills** | Progressive disclosure | 6 slash commands | N/A | 129 skills | N/A | 35 skills | Memory focus |
+| **Multi-Provider** | Yes (Claude/Codex/Gemini) | 3 CLIs (separate) | No | No | No | No | No |
+| **Memory System** | 3-tier (episodic/semantic/procedural) | None | N/A | N/A | Hybrid | N/A | SQLite+FTS5 |
+| **Quality Gates** | 7 gates + Completion Council | User verify only | Two-Stage Review | N/A | Consensus | Tiered | N/A |
+| **Context Mgmt** | Standard | Fresh per task (core innovation) | Fresh per task | N/A | N/A | N/A | Progressive |
+| **Autonomy** | Full (zero human) | Semi (checkpoints) | Human-guided | Human-guided | Orchestrated | Human-guided | N/A |
 
 ### What Loki Mode LACKS (Honest Assessment)
 
@@ -233,7 +236,7 @@ These are patterns from competing projects that are **practically and scientific
 | **Constitutional AI Integration** | Principles-based self-critique from Anthropic research | None have this |
 | **Anti-Sycophancy (CONSENSAGENT)** | Blind review + devil's advocate prevents groupthink | None have this |
 | **Provider Abstraction Layer** | Clean degradation from full-featured to sequential-only | Claude-only projects can't degrade |
-| **37 Specialized Agents** | Purpose-built agents in 7 swarms vs generic | agents (108) has more but less organized |
+| **41 Specialized Agents** | Purpose-built agents in 7 swarms vs generic | agents (108) has more but less organized |
 | **Research Foundation** | 10+ academic papers integrated with citations | Most have no research backing |
 
 ### Superpowers Deep-Dive (35K+ Stars)
@@ -255,7 +258,7 @@ Plugin marketplace architecture with unprecedented scale:
 | Pattern | Description | Loki Mode Status |
 |---------|-------------|------------------|
 | **72 Plugins** | Modular, focused plugins instead of monolith | Different approach (progressive disclosure) |
-| **108 Agents** | Specialized agents for specific domains | 37 agents in Loki Mode |
+| **108 Agents** | Specialized agents for specific domains | 41 agents in Loki Mode |
 | **129 Skills** | Skills as first-class objects | 10 skills in skills/ |
 | **Four-Tier Model Strategy** | Explicit tier selection with constraints | Similar to Loki Mode tiers |
 
@@ -276,7 +279,7 @@ Tiered agent architecture with explicit escalation:
 
 | Pattern | Description | Loki Mode Status |
 |---------|-------------|------------------|
-| **32 Agents** | Smaller but well-organized agent set | 37 in Loki Mode |
+| **32 Agents** | Smaller but well-organized agent set | 41 in Loki Mode |
 | **35 Skills** | Domain-specific skills | 10 skills in Loki Mode |
 | **Tiered Architecture** | LOW/MEDIUM/HIGH with explicit triggers | **IMPLEMENTED** (model-selection.md lines 180-363) |
 | **Delegation Enforcer** | Middleware auto-injects correct model | Evaluating |
@@ -339,7 +342,7 @@ Tiered agent architecture with explicit escalation:
 
 | Agent | Killer Feature |
 |-------|---------------|
-| **Loki Mode** | Zero-human-intervention full SDLC, 37 agents in 7 swarms, Constitutional AI, anti-sycophancy, cross-project learning, code transformation, property-based testing |
+| **Loki Mode** | Zero-human-intervention full SDLC, 41 agents in 7 swarms, Constitutional AI, anti-sycophancy, cross-project learning, code transformation, property-based testing |
 | **Devin** | Full software engineer persona, Slack integration, 67% PR merge rate |
 | **OpenAI Codex** | Skills marketplace, $skill-creator, GPT-5.2-Codex, secure sandbox |
 | **Cursor** | 8 parallel agents, BugBot, Memories, $10B valuation, Composer model (250 tok/s) |
@@ -355,7 +358,7 @@ Tiered agent architecture with explicit escalation:
 | Dimension | Loki Mode Advantage |
 |-----------|-------------------|
 | **Autonomy** | Only agent designed for TRUE zero human intervention |
-| **Multi-Agent** | 37 specialized agents in 7 swarms vs 1-8 in competitors |
+| **Multi-Agent** | 41 specialized agents in 7 swarms vs 1-8 in competitors |
 | **Quality** | 7 gates + blind review + devil's advocate + property-based testing |
 | **Research** | 10+ academic papers integrated vs proprietary/undisclosed |
 | **Anti-Sycophancy** | Only agent with CONSENSAGENT-based blind review |

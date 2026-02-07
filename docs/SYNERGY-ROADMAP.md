@@ -1,4 +1,4 @@
-# Loki Mode Synergy Roadmap v5.17
+# Loki Mode Synergy Roadmap v5.25
 
 ## Executive Summary
 
@@ -8,7 +8,7 @@ This document outlines the architectural improvements to create **unified synerg
 
 ---
 
-## Current Architecture (v5.16.0)
+## Current Architecture (v5.25.0)
 
 ```
                     +------------------+
@@ -474,6 +474,6 @@ These quick wins can be implemented without major architectural changes and prov
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2026-02-03*
+*Document Version: 1.1*
+*Last Updated: 2026-02-06*
 *Authored by: Loki Mode Development Team*

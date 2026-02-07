@@ -1,10 +1,33 @@
 # Loki Mode Competitive Analysis
 
-*Last Updated: 2026-01-05*
+*Last Updated: 2026-02-06*
 
 ## Executive Summary
 
-Loki Mode has **unique differentiation** in business operations automation but faces significant gaps in benchmarks, community adoption, and enterprise security features compared to established competitors.
+Loki Mode has **unique differentiation** in autonomous SDLC orchestration, quality assurance (Completion Council), and memory systems. The most direct competitor is **get-shit-done** (11.9K stars, 21K npm/wk) which solves context management with simpler architecture. Loki Mode is technically deeper but faces significant adoption gaps.
+
+---
+
+## Direct Competitor: get-shit-done (GSD)
+
+**Repo:** [github.com/glittercowboy/get-shit-done](https://github.com/glittercowboy/get-shit-done) | **Stars:** 11,903 | **npm:** 21.4K/wk
+
+GSD is the closest competitor -- a context engineering system that spawns fresh subagent contexts per task. It installs as slash commands into Claude Code, OpenCode, or Gemini CLI.
+
+| Dimension | Loki Mode | GSD | Winner |
+|-----------|-----------|-----|--------|
+| Feature depth | Deep (memory, council, dashboard, events, 41 agents) | Shallow (6 commands, 11 agents, markdown state) | Loki |
+| Adoption | 594 stars, 6K/wk npm | 11,903 stars, 21K/wk npm | GSD (20x) |
+| Simplicity | Complex (5.4K-line run.sh, 12 Python modules) | Simple (markdown agents + slash commands) | GSD |
+| Full autonomy | Walk away, come back to deployed product | Human checkpoints at discuss/verify/milestone | Loki |
+| Quality gates | 7-gate + Completion Council + anti-sycophancy | User verification only | Loki |
+| Memory system | Episodic/semantic/procedural + vector search | None | Loki |
+| Context management | Standard | Fresh subagent contexts per task (core innovation) | GSD |
+| Time to value | Learn architecture, understand CLI flags | `npx get-shit-done-cc` and go | GSD |
+| Multi-provider | Orchestrates across Claude/Codex/Gemini with degraded mode | Installs separately to each | Loki |
+| Real-world proof | No public case studies | Testimonials, 1.1K forks, 75 PRs | GSD |
+
+**Key takeaway:** GSD proved the market wants sharp blades, not Swiss Army knives. Loki Mode's Completion Council and quality gates are genuinely unique IP that no competitor has.
 
 ---
 
@@ -12,8 +35,8 @@ Loki Mode has **unique differentiation** in business operations automation but f
 
 | Feature | Loki Mode | Claude-Flow | MetaGPT | CrewAI | Cursor Agent | Devin |
 |---------|-----------|-------------|---------|--------|--------------|-------|
-| **GitHub Stars** | 349 | 10,700 | 62,400 | 25,000+ | N/A (Commercial) | N/A (Commercial) |
-| **Agent Count** | 37 types | 64+ agents | 5 roles | Unlimited | 8 parallel | 1 autonomous |
+| **GitHub Stars** | 594 | 13,700 | 62,400 | 25,000+ | N/A (Commercial) | N/A (Commercial) |
+| **Agent Count** | 41 types | 64+ agents | 5 roles | Unlimited | 8 parallel | 1 autonomous |
 | **Parallel Execution** | Yes (100+) | Yes (swarms) | Sequential | Yes (crews) | Yes (8 worktrees) | Yes (fleet) |
 | **Published Benchmarks** | **98.78% HumanEval (multi-agent)** | None | 85.9-87.7% HumanEval | None | ~250 tok/s | 15% complex tasks |
 | **SWE-bench Score** | **99.67% patch gen (299/300)** | Unknown | Unknown | Unknown | Unknown | 15% complex |
@@ -239,20 +262,21 @@ Loki Mode has **unique differentiation** in business operations automation but f
 - **Impact:** Enterprise adoption blocked
 - **Solution:** Implement sandbox mode, staged autonomy, audit logs
 
-### Priority 3: Cross-Project Learning (Differentiator)
-- **Gap:** Each project starts fresh; no accumulated knowledge
-- **Impact:** Repeats mistakes, no efficiency gains over time
-- **Solution:** Implement learnings database like AgentDB
+### Priority 3: Cross-Project Learning (IMPLEMENTED v5.15.0)
+- **Gap:** ~~Each project starts fresh; no accumulated knowledge~~ RESOLVED
+- **Result:** 3-tier memory system (episodic/semantic/procedural) with vector search
+- **Next:** Improve consolidation pipeline, add cross-project retrieval benchmarks
 
-### Priority 4: Observability (Production Readiness)
-- **Gap:** Basic dashboard, no tracing
-- **Impact:** Hard to debug complex multi-agent runs
-- **Solution:** Add OpenTelemetry tracing, agent lineage visualization
+### Priority 4: Observability (IMPLEMENTED v5.23.0)
+- **Gap:** ~~Basic dashboard, no tracing~~ PARTIALLY RESOLVED
+- **Result:** Dark-themed web dashboard with real-time monitoring, task board, Completion Council views
+- **Next:** OpenTelemetry tracing, agent lineage visualization
 
-### Priority 5: Community/Documentation
-- **Gap:** 349 stars vs. 10K-60K for competitors
+### Priority 5: Community/Documentation (IN PROGRESS)
+- **Gap:** 594 stars vs. 11K-60K for competitors
 - **Impact:** Limited trust and contribution
-- **Solution:** More examples, video tutorials, case studies
+- **Done:** CONTRIBUTING.md, issue templates, PR template, CODE_OF_CONDUCT, dev setup docs
+- **Next:** Video tutorials, case studies, example PRDs, reduce onboarding friction
 
 ---
 

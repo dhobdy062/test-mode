@@ -35,9 +35,28 @@ try {
     if (stats.isSymbolicLink()) {
       fs.unlinkSync(skillDir);
     } else {
-      console.log(`Existing installation found at ${skillDir}`);
-      console.log('Please remove it manually if you want to use this npm installation.');
+      // Existing real directory (not a symlink) - back it up and replace
+      const backupDir = skillDir + '.backup.' + Date.now();
+      console.log(`[WARNING] Existing non-symlink installation found at ${skillDir}`);
+      console.log(`  Active version: ${skillDir}`);
+      console.log(`  npm version:    ${packageDir}`);
       console.log('');
+      console.log(`Backing up existing installation to: ${backupDir}`);
+      try {
+        fs.renameSync(skillDir, backupDir);
+        console.log('Backup complete. Creating symlink to npm installation.');
+        console.log('');
+        console.log(`To restore the old installation later:`);
+        console.log(`  rm "${skillDir}" && mv "${backupDir}" "${skillDir}"`);
+        console.log('');
+      } catch (backupErr) {
+        console.log(`Could not back up existing installation: ${backupErr.message}`);
+        console.log('');
+        console.log('To fix manually, remove the existing directory and reinstall:');
+        console.log(`  rm -rf "${skillDir}"`);
+        console.log('  npm install -g loki-mode');
+        console.log('');
+      }
     }
   }
 
